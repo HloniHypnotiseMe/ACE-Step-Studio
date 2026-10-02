@@ -7,6 +7,7 @@ import { PianoRoll } from "./PianoRoll";
 import { ImportAudio } from "./ImportAudio";
 import { BrowserRecorder } from "./recording/Recorder";
 import { createGeneration, waitForGeneration } from "./api/GenerationClient";
+import { createStemJob, waitForStemJob } from "./api/StemClient";
 import { loadProject, saveProject } from "./persistence/ProjectStorage";
 
 type StudioAsset = { id: string; uri: string; name: string; durationSeconds?: number };
@@ -17,6 +18,7 @@ export function StudioApp() {
   const [playing, setPlaying] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [splittingTrackId, setSplittingTrackId] = useState<string>();
   const [status, setStatus] = useState("Ready");
   const [waveform, setWaveform] = useState<Float32Array>();
   const [loaded, setLoaded] = useState(false);
@@ -175,6 +177,36 @@ export function StudioApp() {
     }
   };
 
+  const splitStems = async (trackId: string) => {
+    if (splittingTrackId) return;
+    const track = project.tracks.find(item => item.id === trackId);
+    const asset = track?.assets[0];
+    if (!track || !asset) return;
+    setSplittingTrackId(trackId);
+    setStatus(`Sending ${track.name} to local StemDeck…`);
+    try {
+      const job = await createStemJob(asset.uri, `${track.name}.wav`);
+      const result = await waitForStemJob(job.job_id, state => {
+        setStatus(state.stage || `Stem separation ${state.status}`);
+      });
+      for (const stem of result.stems || []) {
+        const stemId = crypto.randomUUID();
+        addAsset({
+          id: stemId,
+          uri: stem.url,
+          name: `${track.name} · ${stem.name}`,
+          format: "wav",
+          durationSeconds: result.duration_sec ?? asset.durationSeconds
+        });
+      }
+      setStatus(`Created ${result.stems?.length ?? 0} editable stems`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Stem separation failed");
+    } finally {
+      setSplittingTrackId(undefined);
+    }
+  };
+
   const manualSave = async () => {
     try {
       await saveProject(project);
@@ -255,7 +287,7 @@ export function StudioApp() {
                   }} />
                 </div>
                 <button onClick={() => updateTrack(track.id, { muted: !track.muted })}>{track.muted ? "Unmute" : "Mute"}</button>
-                <button onClick={() => updateTrack(track.id, { solo: !track.solo })}>{track.solo ? "Unsolo" : "Solo"}</button>
+                <button onClick={() => updateTrack(track.id, { solo: !track.solo })}>{track.solo ? "Unsolo" : "Solo"}</button><button disabled={Boolean(splittingTrackId)} onClick={() => void splitStems(track.id)}>{splittingTrackId === track.id ? "Splitting…" : "Split Stems"}</button>
               </div>;
             })}
       </section>

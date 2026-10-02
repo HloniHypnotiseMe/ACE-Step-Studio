@@ -1,0 +1,3 @@
+import type { AudioAsset, ProviderContext, StemSeparationProvider } from "./contracts.js";
+export interface StemJobResult { source:AudioAsset; stems:AudioAsset[]; providerId:string; }
+export async function separateIntoStems(provider:StemSeparationProvider,input:AudioAsset,context:ProviderContext):Promise<StemJobResult>{return {source:input,stems:await provider.separate(input,context),providerId:provider.id};}

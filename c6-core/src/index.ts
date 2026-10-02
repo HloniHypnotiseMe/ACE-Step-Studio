@@ -17,3 +17,7 @@ export * from "./midi";
 export * from "./assets";
 export * from "./generation-pipeline";
 export * from "./recording";
+
+export * from "./mixer";
+export * from "./stem-model";
+export * from "./piano-roll";

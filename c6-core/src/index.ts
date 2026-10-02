@@ -11,3 +11,5 @@ export * from "./voice.js";
 export * from "./transcription.js";
 export * from "./job-queue";
 export * from "./project-io";
+
+export * from "./midi";

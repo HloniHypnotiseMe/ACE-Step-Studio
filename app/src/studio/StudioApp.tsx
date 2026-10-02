@@ -20,13 +20,13 @@ export function StudioApp(){
  const engine=useRef(new BrowserAudioEngine()).current;
  const timeline=useMemo(()=>createTimeline(project.sampleRate,project.bpm),[project]);
 
- const addAsset=(asset:{id:string;uri:string;name?:string})=>{
+ const addAsset=(asset:{id:string;uri:string;name?:string;format?:string;durationSeconds?:number})=>{
    const name=asset.name || "Audio";
    setAssets(items=>[...items,{id:asset.id,uri:asset.uri,name}]);
-   setProject(p=>({...p,tracks:[...p.tracks,{id:asset.id,name,type:"audio",gainDb:0,pan:0,muted:false,solo:false,assets:[asset.id]}]}));
+   setProject(p=>({...p,tracks:[...p.tracks,{id:asset.id,name,type:"audio",gainDb:0,pan:0,muted:false,solo:false,assets:[{id:asset.id,uri:asset.uri,format:(asset.format as "wav"|"flac"|"aiff"|"mp3"|"ogg"|"unknown")||"unknown",durationSeconds:asset.durationSeconds}]}]}));
  };
 
- const toggle=()=>{if(playing){engine.pause();setPlaying(false)}else{engine.play();setPlaying(true)}};
+ const toggle=async()=>{if(playing){engine.pause();setPlaying(false);return;} await engine.start(); setPlaying(true); const first=assets[0]; if(first) void engine.playClip({id:first.id,uri:first.uri});};
 
  const generate=async()=>{
    if(generating)return;

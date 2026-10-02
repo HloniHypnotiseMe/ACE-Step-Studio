@@ -1,0 +1,22 @@
+name: c6-core
+on:
+  push:
+    paths: ["c6-core/**"]
+  pull_request:
+    paths: ["c6-core/**"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: c6-core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: c6-core/package.json
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm test

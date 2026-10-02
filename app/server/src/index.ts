@@ -31,6 +31,7 @@ import pipelineRoutes from './routes/pipeline.js';
 import renderVideoRoutes from './routes/render-video.js';
 import toolsRoutes from './routes/tools.js';
 import c6LocalRoutes from './routes/c6-local.js';
+import c6StemRoutes from './routes/c6-stems.js';
 import { pipelineManager } from './services/pipeline-manager.js';
 import { pool } from './db/pool.js';
 import './db/migrate.js';
@@ -436,6 +437,7 @@ app.use('/api/pipeline', pipelineRoutes);
 app.use('/api/render-video', express.json({ limit: '500mb' }), renderVideoRoutes);
 app.use('/api/tools', toolsRoutes);
 app.use('/api/c6-local', c6LocalRoutes);
+app.use('/api/c6-local/stems', c6StemRoutes);
 
 // GET /api/changelog — serve CHANGELOG.md as plain text
 app.get('/api/changelog', (_req, res) => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createProject, type C6MusicProject } from "../../../c6-core/src/project";
+import { addAssetTrack, createProject, moveProjectClip, type C6MusicProject } from "../../../c6-core/src/project";
 import { createImportedAsset } from "../../../c6-core/src/importer";
 import { BrowserAudioEngine } from "./audio/AudioEngine";
 import { Waveform } from "./audio/Waveform";
@@ -89,27 +89,13 @@ export function StudioApp() {
     durationSeconds?: number;
   }) => {
     const format = (asset.format as "wav" | "flac" | "aiff" | "mp3" | "ogg" | "unknown") || "unknown";
-    setProject(currentProject => ({
-      ...currentProject,
-      tracks: [
-        ...currentProject.tracks,
-        {
-          id: asset.id,
-          name: asset.name || "Audio",
-          type: "audio",
-          gainDb: 0,
-          pan: 0,
-          muted: false,
-          solo: false,
-          assets: [{
-            id: asset.id,
-            uri: asset.uri,
-            format,
-            durationSeconds: asset.durationSeconds
-          }]
-        }
-      ]
-    }));
+    const audioAsset = {
+      id: asset.id,
+      uri: asset.uri,
+      format,
+      durationSeconds: asset.durationSeconds
+    };
+    setProject(currentProject => addAssetTrack(currentProject, audioAsset, asset.name || "Audio"));
   };
 
   const updateTrack = (id: string, patch: Partial<C6MusicProject["tracks"][number]>) => {
@@ -278,13 +264,17 @@ export function StudioApp() {
           ? [...Array(4)].map((_, i) => <div className="track" key={i}><span>Track {i + 1}</span><div className="lane" /></div>)
           : project.tracks.map(track => {
               const asset = track.assets[0];
+              const clip = project.clips.find(item => item.trackId === track.id);
+              const left = clip ? Math.min(90, Math.max(0, clip.startSeconds * 3)) : 0;
+              const width = clip ? Math.min(100 - left, Math.max(8, clip.durationSeconds * 3)) : Math.min(100, Math.max(8, (asset?.durationSeconds ?? 8) * 3));
               return <div className="track" key={track.id}>
                 <span>{track.name}</span>
-                <div className="lane">
-                  <i style={{
-                    left: "0%",
-                    width: `${Math.min(100, Math.max(8, (asset?.durationSeconds ?? 8) * 3))}%`
-                  }} />
+                <div className="lane" onDoubleClick={() => {
+                  if (!clip) return;
+                  setProject(currentProject => moveProjectClip(currentProject, clip.id, Math.max(0, clip.startSeconds + 4)));
+                  setStatus(`Moved ${track.name} to ${(clip.startSeconds + 4).toFixed(1)}s`);
+                }}>
+                  <i style={{ left: `${left}%`, width: `${width}%` }} />
                 </div>
                 <button onClick={() => updateTrack(track.id, { muted: !track.muted })}>{track.muted ? "Unmute" : "Mute"}</button>
                 <button onClick={() => updateTrack(track.id, { solo: !track.solo })}>{track.solo ? "Unsolo" : "Solo"}</button><button disabled={Boolean(splittingTrackId)} onClick={() => void splitStems(track.id)}>{splittingTrackId === track.id ? "Splitting…" : "Split Stems"}</button>

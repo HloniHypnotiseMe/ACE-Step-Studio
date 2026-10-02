@@ -25,3 +25,5 @@ export * from "./piano-roll";
 export * from "./adapters/command-runtime";
 export * from "./adapters/provider-runtime";
 export * from "./model-manager";
+
+export * from "./adapters/ace-step-command";

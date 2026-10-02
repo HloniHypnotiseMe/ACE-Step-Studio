@@ -21,3 +21,7 @@ export * from "./recording";
 export * from "./mixer";
 export * from "./stem-model";
 export * from "./piano-roll";
+
+export * from "./adapters/command-runtime";
+export * from "./adapters/provider-runtime";
+export * from "./model-manager";

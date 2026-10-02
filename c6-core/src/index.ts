@@ -27,3 +27,7 @@ export * from "./adapters/provider-runtime";
 export * from "./model-manager";
 
 export * from "./adapters/ace-step-command";
+
+export * from "./adapters/stem-command";
+export * from "./importer";
+export * from "./undo";

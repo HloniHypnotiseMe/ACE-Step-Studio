@@ -13,3 +13,7 @@ export * from "./job-queue";
 export * from "./project-io";
 
 export * from "./midi";
+
+export * from "./assets";
+export * from "./generation-pipeline";
+export * from "./recording";

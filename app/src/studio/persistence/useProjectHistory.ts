@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { C6MusicProject } from "../../../c6-core/src/project";
+import type { C6MusicProject } from "../../../../c6-core/src/project";
 
 export function useProjectHistory(initial: C6MusicProject) {
   const [project, setProject] = useState(initial);

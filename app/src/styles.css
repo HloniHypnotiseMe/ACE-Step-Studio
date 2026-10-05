@@ -41,3 +41,20 @@ footer{border:0;color:#737783;font-size:11px;justify-content:center}
 .clip-actions{position:absolute;right:10px;top:4px;display:flex;gap:2px;opacity:.85}
 .clip-actions button{padding:1px 4px;border:1px solid #858b9a;background:#292c34;color:#eee;border-radius:3px;font-size:8px;line-height:14px;cursor:pointer}
 .clip-actions button:hover{background:#3a3e49}
+
+.transport-time{min-width:82px;font-variant-numeric:tabular-nums;color:#f0f1f4;font-size:15px;letter-spacing:.06em}
+.mixer-panel{border-top:1px solid #292b31;background:#111216;overflow:auto}
+.mixer-strips{display:flex;gap:7px;padding:10px 14px 14px;min-height:154px}
+.mixer-strip{position:relative;flex:0 0 108px;min-height:132px;padding:8px 8px 7px;background:#181a1f;border:1px solid #2d3038;border-radius:6px;display:flex;flex-direction:column;gap:5px;text-align:center}
+.mixer-strip input[type=range]{width:100%;accent-color:#9ba2b3}
+.mixer-name{font-size:9px;color:#d7d9df;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mixer-strip strong{font-size:9px;color:#8f94a0;font-weight:500}
+.mixer-pan{font-size:8px;color:#777c87;min-height:10px}
+.mixer-buttons{display:flex;gap:4px;justify-content:center;margin-top:auto}
+.mixer-buttons button{width:30px;padding:4px 0;border:1px solid #363943;background:#22242b;color:#aeb2bc;border-radius:4px;font-size:9px}
+.mixer-buttons button.active{background:#454957;color:#fff}
+.mixer-meter{position:absolute;left:3px;top:8px;width:3px;height:82px;background:#0b0c0f;border-radius:2px;overflow:hidden}
+.mixer-meter i{position:absolute;bottom:0;width:100%;background:#858b9b}
+.mixer-strip.master{border-color:#4a4e59}
+.mixer-master-status{margin-top:auto;font-size:8px;letter-spacing:.08em;color:#8f94a0}
+.mixer-empty{padding:35px;color:#666b76;font-size:11px}

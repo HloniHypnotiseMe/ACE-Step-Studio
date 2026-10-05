@@ -10,8 +10,8 @@ describe("runtime safety gates",()=>{
   it("filters models by hardware and local-use requirements",()=>{
     const r=new ModelRegistry();
     r.register({id:"test",version:"1",providerId:"x",license:"MIT",commercialRedistribution:true,localInference:true,minVramGb:8,backends:["cuda"],provenance:"test"});
-    expect(r.eligible("test","cuda",12)).toBe(true);
-    expect(r.eligible("test","cuda",4)).toBe(false);
-    expect(r.eligible("test","cpu",32)).toBe(false);
+    expect(r.isEligible("test","cuda",12)).toBe(true);
+    expect(r.isEligible("test","cuda",4)).toBe(false);
+    expect(r.isEligible("test","cpu",32)).toBe(false);
   });
 });

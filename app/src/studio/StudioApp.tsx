@@ -9,7 +9,8 @@ import { ImportAudio } from "./ImportAudio";
 import { BrowserRecorder } from "./recording/Recorder";
 import { createGeneration, waitForGeneration } from "./api/GenerationClient";
 import { createStemJob, waitForStemJob } from "./api/StemClient";
-import { getStoredAsset, loadProject, saveProject, storeAsset } from "./persistence/ProjectStorage";\nimport { exportProjectPackage, importProjectPackage } from "./persistence/ProjectPackage";
+import { getStoredAsset, loadProject, saveProject, storeAsset } from "./persistence/ProjectStorage";
+import { exportProjectPackage, importProjectPackage } from "./persistence/ProjectPackage";
 import { RuntimeStatus } from "./RuntimeStatus";
 import { MixerPanel } from "./MixerPanel";
 import { useProjectHistory } from "./persistence/useProjectHistory";
@@ -304,7 +305,8 @@ export function StudioApp() {
         <textarea value={prompt} onChange={e => setPrompt(e.target.value)} />
         <button className="primary" disabled={generating} onClick={() => void generate()}>{generating ? "Generating…" : "Generate Idea"}</button>
         <button disabled={generating} onClick={() => void generate(4)}>Generate 4 Variations</button>
-        <RuntimeStatus />\n        <h3>PROJECT</h3>
+        <RuntimeStatus />
+        <h3>PROJECT</h3>
         <ImportAudio onImport={addAsset} />
         <button onClick={toggleRecording}>{recording ? "Stop Recording" : "Record"}</button>
         <div className="card"><strong>{assets.length} audio assets</strong><br /><small>Stored locally with the project.</small></div>

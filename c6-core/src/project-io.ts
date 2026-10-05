@@ -16,14 +16,30 @@ export interface SerializedProject {
   project: C6MusicProject;
 }
 
+function migrateProject(project: C6MusicProject): C6MusicProject {
+  const clips = Array.isArray(project.clips)
+    ? project.clips
+    : project.tracks.flatMap(track => track.assets.map(asset => ({
+        id: crypto.randomUUID(),
+        trackId: track.id,
+        assetId: asset.id,
+        startSeconds: 0,
+        durationSeconds: asset.durationSeconds ?? 8,
+        gainDb: 0
+      })));
+
+  return { ...project, clips };
+}
+
 export function serializeProject(project: C6MusicProject, files: string[] = []): string {
   const now = new Date().toISOString();
+  const createdAt = typeof project.metadata.createdAt === "string" ? project.metadata.createdAt : now;
   const payload: SerializedProject = {
     manifest: {
       schemaVersion: PROJECT_SCHEMA_VERSION,
       projectId: project.id,
       name: project.name,
-      createdAt: now,
+      createdAt,
       updatedAt: now,
       files,
     },
@@ -38,5 +54,5 @@ export function deserializeProject(serialized: string): C6MusicProject {
     throw new Error(`Unsupported project schema: ${payload.manifest.schemaVersion}`);
   }
   if (payload.manifest.projectId !== payload.project.id) throw new Error("Project ID mismatch");
-  return payload.project;
+  return migrateProject(payload.project);
 }

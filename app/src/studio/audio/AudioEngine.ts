@@ -15,6 +15,7 @@ export class BrowserAudioEngine {
   private ctx?: AudioContext;
   private startedAt = 0;
   private offset = 0;
+  private transportState: TransportState = "stopped";
   private buffers = new Map<string, AudioBuffer>();
   private sources = new Map<string, AudioBufferSourceNode>();
 
@@ -57,6 +58,7 @@ export class BrowserAudioEngine {
   async start() {
     await this.ensureContext();
     this.startedAt = this.ctx!.currentTime - this.offset;
+    this.transportState = "playing";
   }
 
   play() {
@@ -64,6 +66,7 @@ export class BrowserAudioEngine {
     else {
       this.startedAt = this.ctx.currentTime - this.offset;
       void this.ctx.resume();
+      this.transportState = "playing";
     }
   }
 
@@ -72,6 +75,7 @@ export class BrowserAudioEngine {
       this.offset = this.ctx.currentTime - this.startedAt;
       void this.ctx.suspend();
     }
+    this.transportState = "paused";
   }
 
   stop() {
@@ -81,6 +85,7 @@ export class BrowserAudioEngine {
     }
     this.sources.clear();
     if (this.ctx) void this.ctx.suspend();
+    this.transportState = "stopped";
   }
 
   async playClip(clip: AudioClip) {
@@ -120,7 +125,7 @@ export class BrowserAudioEngine {
   }
 
   get state(): TransportState {
-    return this.ctx?.state === "running" ? "playing" : "stopped";
+    return this.transportState;
   }
 
   get positionSeconds() {

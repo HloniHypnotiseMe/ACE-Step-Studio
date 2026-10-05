@@ -9,7 +9,7 @@ import { ImportAudio } from "./ImportAudio";
 import { BrowserRecorder } from "./recording/Recorder";
 import { createGeneration, waitForGeneration } from "./api/GenerationClient";
 import { createStemJob, waitForStemJob } from "./api/StemClient";
-import { loadProject, saveProject } from "./persistence/ProjectStorage";
+import { getStoredAsset, loadProject, saveProject, storeAsset } from "./persistence/ProjectStorage";\nimport { exportProjectPackage, importProjectPackage } from "./persistence/ProjectPackage";
 
 type StudioAsset = { id: string; uri: string; name: string; durationSeconds?: number };
 const TIMELINE_SECONDS = 32;
@@ -187,6 +187,51 @@ export function StudioApp() {
     }
   };
 
+  const exportPackage = async () => {
+    try {
+      const blob = await exportProjectPackage(project, getStoredAsset);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${project.name.replace(/[^a-z0-9-_]+/gi, "-") || "c6-project"}.c6proj`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setStatus("Project package exported");
+    } catch (error) {
+      setStatus(error instanceof Error ? `Export failed: ${error.message}` : "Export failed");
+    }
+  };
+
+  const importPackage = async (file: File) => {
+    try {
+      engine.stop();
+      const restored = await importProjectPackage(file, storeAsset);
+      setProject({
+        ...restored.project,
+        clips: restored.project.clips ?? [],
+        tracks: restored.project.tracks.map(track => ({
+          ...track,
+          assets: track.assets.map(asset => ({ ...asset, uri: restored.assets.get(asset.id) ?? asset.uri }))
+        }))
+      });
+      setPlaying(false);
+      setStatus(`Imported ${file.name}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? `Import failed: ${error.message}` : "Import failed");
+    }
+  };
+
+  const pickPackage = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".c6proj,application/json";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (file) void importPackage(file);
+    };
+    input.click();
+  };
+
   const reset = () => {
     engine.stop();
     setPlaying(false);
@@ -198,7 +243,7 @@ export function StudioApp() {
   return <main className="studio-shell">
     <header className="topbar">
       <div><strong>C6 MUSIC STUDIO</strong><span> LOCAL AI WORKSTATION</span></div>
-      <div><button onClick={manualSave}>Save</button><button onClick={() => void loadProject().then(saved => {
+      <div><button onClick={manualSave}>Save</button><button onClick={() => void exportPackage()}>Export</button><button onClick={pickPackage}>Import</button><button onClick={() => void loadProject().then(saved => {
         if (!saved) { setStatus("No saved project"); return; }
         setProject({ ...saved.project, clips: saved.project.clips ?? [], tracks: saved.project.tracks.map(track => ({
           ...track, assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))

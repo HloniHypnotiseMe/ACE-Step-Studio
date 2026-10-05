@@ -34,9 +34,9 @@ export function StudioApp() {
   const engine = useRef(new BrowserAudioEngine()).current;
   const recorder = useRef(new BrowserRecorder()).current;
 
-  const assets: StudioAsset[] = project.tracks.flatMap(track =>
-    track.assets.map(asset => ({ id: asset.id, uri: asset.uri, name: track.name, durationSeconds: asset.durationSeconds }))
-  );
+  const assets: StudioAsset[] = project.tracks.flatMap(track => track.assets.map(asset => ({ id: asset.id, uri: asset.uri, name: track.name, durationSeconds: asset.durationSeconds })));
+  const selectedClip = selectedClipId ? project.clips.find(clip => clip.id === selectedClipId) : undefined;
+  const selectedSource = selectedClip ? project.tracks.find(track => track.id === selectedClip.trackId)?.assets.find(asset => asset.id === selectedClip.assetId) : undefined;
 
   useEffect(() => {
     let cancelled = false;
@@ -194,12 +194,13 @@ export function StudioApp() {
     }
   };
 
-  const generate = async (batchSize = 1) => {
+  const generate = async (batchSize = 1, taskType: "text2music" | "cover" | "repaint" = "text2music") => {
     if (generating) return;
     setGenerating(true);
-    setStatus(batchSize > 1 ? `Queueing ${batchSize} AI variations…` : "Queueing generation…");
+    setStatus(taskType === "repaint" ? "Queueing AI repaint…" : taskType === "cover" ? "Queueing AI cover…" : batchSize > 1 ? "Queueing " + batchSize + " AI variations…" : "Queueing generation…");
     try {
-      const job = await createGeneration({ prompt, batchSize });
+      if (taskType !== "text2music" && !selectedSource) throw new Error("Select an audio clip first");
+      const job = await createGeneration({ prompt, batchSize, taskType, sourceAudioUrl: selectedSource?.uri, repaintingStart: taskType === "repaint" ? selectedClip?.startSeconds : undefined, repaintingEnd: taskType === "repaint" ? (selectedClip?.startSeconds ?? 0) + (selectedClip?.durationSeconds ?? 0) : undefined });
       const result = await waitForGeneration(job.jobId, s => setStatus(s.stage || s.status));
       if (result.audioUrls.length === 0) throw new Error("Generation returned no audio assets");
       result.audioUrls.forEach((uri, index) => {
@@ -211,7 +212,7 @@ export function StudioApp() {
           durationSeconds: result.duration
         });
       });
-      setStatus(batchSize > 1 ? `Generated ${result.audioUrls.length} variations` : `Generated in ${result.generationTime ?? "—"}s`);
+      setStatus(taskType === "repaint" ? "Repainted " + result.audioUrls.length + " asset(s)" : taskType === "cover" ? "Created " + result.audioUrls.length + " cover asset(s)" : batchSize > 1 ? "Generated " + result.audioUrls.length + " variations" : "Generated in " + (result.generationTime ?? "—") + "s");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Generation failed");
     } finally {
@@ -336,6 +337,8 @@ export function StudioApp() {
         <textarea value={prompt} onChange={e => setPrompt(e.target.value)} />
         <button className="primary" disabled={generating} onClick={() => void generate()}>{generating ? "Generating…" : "Generate Idea"}</button>
         <button disabled={generating} onClick={() => void generate(4)}>Generate 4 Variations</button>
+        <div className="ai-actions"><button disabled={generating || !selectedSource} onClick={() => void generate(1, "cover")}>Cover Selected</button><button disabled={generating || !selectedSource} onClick={() => void generate(1, "repaint")}>Repaint Selected</button></div>
+        <small className="ai-hint">{selectedSource ? "Selected clip is the AI source." : "Select a timeline clip for Cover/Repaint."}</small>
         <RuntimeStatus />
         <h3>PROJECT</h3>
         <ImportAudio onImport={addAsset} />

@@ -1,167 +1,5 @@
 impo
 
-  const loadSavedProject = async () => {
-    try {
-      const saved = await loadProject();
-      if (!saved) { setStatus("No saved project"); return; }
-      setProject({
-        ...saved.project,
-        clips: saved.project.clips ?? [],
-        tracks: saved.project.tracks.map(track => ({
-          ...track,
-          assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
-        }))
-      }, true);
-      setPlaying(false);
-      setSelectedClipId(undefined);
-      setPlayheadSeconds(0);
-      setStatus("Project loaded");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Load failed");
-    }
-  };rt { useEffect, useRef, useState } from "react";
-import { addAssetTrack, createProject, moveProjectClip, resizeProjectClip, duplicateProjectClip, splitProjectClip, deleteProjectClip, moveProjectClipToTrack, type C6MusicProject } from "../../../c6-core/src/project";
-import { snapSeconds } from "../../../c6-core/src/timeline";
-import { createImportedAsset } from "../../../c6-core/src/importer";
-import { BrowserAudioEngine } from "./audio/AudioEngine";
-import { Waveform } from "./audio/Waveform";
-import { PianoRoll } from "./PianoRoll";
-import { ImportAudio } from "./ImportAudio";
-import { BrowserRecorder } from "./recording/Recorder";
-import { createGeneration, waitForGeneration } from "./api/GenerationClient";
-import { createStemJob, waitForStemJob } from "./api/StemClient";
-import { getStoredAsset, loadProject, saveProject, storeAsset } from "./persistence/ProjectStorage";
-import { exportProjectPackage, importProjectPackage } from "./persistence/ProjectPackage";
-import { RuntimeStatus } from "./RuntimeStatus";
-import { MixerPanel } from "./MixerPanel";
-import { useProjectHistory } from "./persistence/useProjectHistory";
-
-type StudioAsset = { id: string; uri: string; name: string; durationSeconds?: number };
-const TIMELINE_SECONDS = 32;
-
-export function StudioApp() {
-  const { project, setProject, apply: applyProject, undo, redo, canUndo, canRedo } = useProjectHistory(createProject("C6 Music Studio"));
-  const [prompt, setPrompt] = useState("dark amapiano, warm bass, atmospheric keys, modern drums");
-  const [playing, setPlaying] = useState(false);
-  const [transportSeconds, setTransportSeconds] = useState(0);
-  const [playheadSeconds, setPlayheadSeconds] = useState(0);
-  const [selectedClipId, setSelectedClipId] = useState<string>();
-  const [generating, setGenerating] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [splittingTrackId, setSplittingTrackId] = useState<string>();
-  const [status, setStatus] = useState("Ready");
-  const [waveform, setWaveform] = useState<Float32Array>();
-  const [loaded, setLoaded] = useState(false);
-  const engine = useRef(new BrowserAudioEngine()).current;
-  const recorder = useRef(new BrowserRecorder()).current;
-
-  const assets: StudioAsset[] = project.tracks.flatMap(track => track.assets.map(asset => ({ id: asset.id, uri: asset.uri, name: track.name, durationSeconds: asset.durationSeconds })));
-  const selectedClip = selectedClipId ? project.clips.find(clip => clip.id === selectedClipId) : undefined;
-  const selectedSource = selectedClip ? project.tracks.find(track => track.id === selectedClip.trackId)?.assets.find(asset => asset.id === selectedClip.assetId) : undefined;
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadProject().then(saved => {
-      if (cancelled) return;
-      if (!saved) { setLoaded(true); return; }
-      const restored: C6MusicProject = {
-        ...saved.project,
-        clips: saved.project.clips ?? [],
-        tracks: saved.project.tracks.map(track => ({
-          ...track,
-          assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
-        }))
-      };
-      setProject(restored);
-      setStatus(`Loaded project · saved ${new Date(saved.savedAt).toLocaleTimeString()}`);
-      setLoaded(true);
-    }).catch(error => {
-      if (!cancelled) {
-        setStatus(error instanceof Error ? `Load failed: ${error.message}` : "Load failed");
-        setLoaded(true);
-      }
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    const timer = window.setTimeout(() => {
-      void saveProject(project).then(() => setStatus("Autosaved")).catch(error => {
-        setStatus(error instanceof Error ? `Autosave failed: ${error.message}` : "Autosave failed");
-      });
-    }, 1200);
-    return () => window.clearTimeout(timer);
-  }, [project, loaded]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const editing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
-      const modifier = event.ctrlKey || event.metaKey;
-      if (modifier && event.key.toLowerCase() === "z") {
-        event.preventDefault();
-        if (event.shiftKey) redo(); else undo();
-        return;
-      }
-      if (modifier && event.key.toLowerCase() === "y") {
-        event.preventDefault();
-        redo();
-        return;
-      }
-      if (editing) return;
-      if (event.code === "Space") {
-        event.preventDefault();
-        void toggle();
-        return;
-      }
-      if (event.key === "Delete" || event.key === "Backspace") {
-        if (!selectedClipId) return;
-        event.preventDefault();
-        applyProject(current => deleteProjectClip(current, selectedClipId));
-        setSelectedClipId(undefined);
-        return;
-      }
-      if (!selectedClipId || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-      event.preventDefault();
-      const step = event.shiftKey ? 1 : 0.25;
-      applyProject(current => {
-        const clip = current.clips.find(item => item.id === selectedClipId);
-        if (!clip) return current;
-        const next = Math.max(0, clip.startSeconds + (event.key === "ArrowRight" ? step : -step));
-        return moveProjectClip(current, selectedClipId, snapSeconds(next, current.bpm));
-      });
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [applyProject, redo, selectedClipId, undo]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      const position = engine.positionSeconds;
-      setTransportSeconds(position);
-      if (playing) setPlayheadSeconds(position);
-      if (playing && engine.state === "stopped") setPlaying(false);
-    }, 50);
-    return () => window.clearInterval(timer);
-  }, [engine, playing]);
-
-  useEffect(() => {
-    const first = assets[0];
-    if (!first) { setWaveform(undefined); return; }
-    let cancelled = false;
-    void engine.waveform(first.uri).then(w => {
-      if (!cancelled) setWaveform(w);
-    }).catch(() => { if (!cancelled) setWaveform(undefined); });
-    return () => { cancelled = true; };
-  }, [assets.length, assets[0]?.uri, engine]);
-
-  const addAsset = (asset: { id: string; uri: string; name?: string; format?: string; durationSeconds?: number }) => {
-    const format = (asset.format as "wav" | "flac" | "aiff" | "mp3" | "ogg" | "unknown") || "unknown";
-    const audioAsset = { id: asset.id, uri: asset.uri, format, durationSeconds: asset.durationSeconds };
-    applyProject(currentProject => addAssetTrack(currentProject, audioAsset, asset.name || "Audio"));
-  };
-
   const updateTrack = (id: string, patch: Partial<C6MusicProject["tracks"][number]>) => {
     applyProject(currentProject => ({
       ...currentProject,
@@ -353,6 +191,27 @@ export function StudioApp() {
     }
   };
 
+
+  const loadSavedProject = async () => {
+    try {
+      const saved = await loadProject();
+      if (!saved) { setStatus("No saved project"); return; }
+      setProject({
+        ...saved.project,
+        clips: saved.project.clips ?? [],
+        tracks: saved.project.tracks.map(track => ({
+          ...track,
+          assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
+        }))
+      }, true);
+      setPlaying(false);
+      setSelectedClipId(undefined);
+      setPlayheadSeconds(0);
+      setStatus("Project loaded");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Load failed");
+    }
+  };
   return <main className="studio-shell">
     <header className="topbar">
       <div><strong>C6 MUSIC STUDIO</strong><span> LOCAL AI WORKSTATION</span></div>

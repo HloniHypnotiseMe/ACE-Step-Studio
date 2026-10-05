@@ -23,6 +23,8 @@ export function StudioApp() {
   const [prompt, setPrompt] = useState("dark amapiano, warm bass, atmospheric keys, modern drums");
   const [playing, setPlaying] = useState(false);
   const [transportSeconds, setTransportSeconds] = useState(0);
+  const [playheadSeconds, setPlayheadSeconds] = useState(0);
+  const [selectedClipId, setSelectedClipId] = useState<string>();
   const [generating, setGenerating] = useState(false);
   const [recording, setRecording] = useState(false);
   const [splittingTrackId, setSplittingTrackId] = useState<string>();
@@ -73,24 +75,51 @@ export function StudioApp() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const editing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
       const modifier = event.ctrlKey || event.metaKey;
-      if (!modifier) return;
-      if (event.key.toLowerCase() === "z") {
+      if (modifier && event.key.toLowerCase() === "z") {
         event.preventDefault();
         if (event.shiftKey) redo(); else undo();
-      } else if (event.key.toLowerCase() === "y") {
+        return;
+      }
+      if (modifier && event.key.toLowerCase() === "y") {
         event.preventDefault();
         redo();
+        return;
       }
+      if (editing) return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        void toggle();
+        return;
+      }
+      if (event.key === "Delete" || event.key === "Backspace") {
+        if (!selectedClipId) return;
+        event.preventDefault();
+        applyProject(current => deleteProjectClip(current, selectedClipId));
+        setSelectedClipId(undefined);
+        return;
+      }
+      if (!selectedClipId || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const step = event.shiftKey ? 1 : 0.25;
+      applyProject(current => {
+        const clip = current.clips.find(item => item.id === selectedClipId);
+        if (!clip) return current;
+        const next = Math.max(0, clip.startSeconds + (event.key === "ArrowRight" ? step : -step));
+        return moveProjectClip(current, selectedClipId, snapSeconds(next, current.bpm));
+      });
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undo, redo]);
+  }, [applyProject, redo, selectedClipId, undo]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       const position = engine.positionSeconds;
       setTransportSeconds(position);
+      if (playing) setPlayheadSeconds(position);
       if (playing && engine.state === "stopped") setPlaying(false);
     }, 50);
     return () => window.clearInterval(timer);
@@ -274,6 +303,8 @@ export function StudioApp() {
   const reset = () => {
     engine.stop();
     setPlaying(false);
+    setSelectedClipId(undefined);
+    setPlayheadSeconds(0);
     setProject(createProject("C6 Music Studio"), true);
     setWaveform(undefined);
     setStatus("New project");
@@ -325,15 +356,21 @@ export function StudioApp() {
               const clips = project.clips.filter(item => item.trackId === track.id);
               return <div className="track" key={track.id}>
                 <span>{track.name}</span>
-                <div className="lane">
+                <div className="lane" onClick={event => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const next = snapSeconds(Math.max(0, Math.min(TIMELINE_SECONDS, (event.clientX - rect.left) / rect.width * TIMELINE_SECONDS)), project.bpm);
+                  setPlayheadSeconds(next);
+                }}>
+                  <div className="timeline-playhead" style={{ left: (Math.min(100, Math.max(0, playheadSeconds / TIMELINE_SECONDS * 100))) + "%" }} />
                   {clips.map(clip => {
                     const left = Math.min(100, Math.max(0, clip.startSeconds / TIMELINE_SECONDS * 100));
                     const width = Math.min(100 - left, Math.max(4, clip.durationSeconds / TIMELINE_SECONDS * 100));
                     return <i
-                    className="clip"
-                    style={{ left: `${left}%`, width: `${width}%` }}
+                    className={"clip" + (selectedClipId === clip.id ? " selected" : "")}
+                    style={{ left: left + "%", width: width + "%" }}
                     onPointerDown={event => {
                       event.stopPropagation();
+                      setSelectedClipId(clip.id);
                       const lane = event.currentTarget.parentElement;
                       if (!lane) return;
                       const rect = lane.getBoundingClientRect();

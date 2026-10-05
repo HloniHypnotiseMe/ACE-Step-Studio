@@ -1,4 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+impo
+
+  const loadSavedProject = async () => {
+    try {
+      const saved = await loadProject();
+      if (!saved) { setStatus("No saved project"); return; }
+      setProject({
+        ...saved.project,
+        clips: saved.project.clips ?? [],
+        tracks: saved.project.tracks.map(track => ({
+          ...track,
+          assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
+        }))
+      }, true);
+      setPlaying(false);
+      setSelectedClipId(undefined);
+      setPlayheadSeconds(0);
+      setStatus("Project loaded");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Load failed");
+    }
+  };rt { useEffect, useRef, useState } from "react";
 import { addAssetTrack, createProject, moveProjectClip, resizeProjectClip, duplicateProjectClip, splitProjectClip, deleteProjectClip, moveProjectClipToTrack, type C6MusicProject } from "../../../c6-core/src/project";
 import { snapSeconds } from "../../../c6-core/src/timeline";
 import { createImportedAsset } from "../../../c6-core/src/importer";

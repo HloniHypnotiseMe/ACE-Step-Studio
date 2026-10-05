@@ -102,3 +102,41 @@ export function resizeProjectClip(project: C6MusicProject, clipId: string, durat
     clips: project.clips.map(clip => clip.id === clipId ? { ...clip, durationSeconds } : clip)
   };
 }
+
+export function duplicateProjectClip(project: C6MusicProject, clipId: string, offsetSeconds = 1): C6MusicProject {
+  const source = project.clips.find(clip => clip.id === clipId);
+  if (!source) throw new Error(`Clip not found: ${clipId}`);
+  const copy: ProjectClip = {
+    ...source,
+    id: crypto.randomUUID(),
+    startSeconds: source.startSeconds + Math.max(0, offsetSeconds)
+  };
+  return { ...project, clips: [...project.clips, copy] };
+}
+
+export function deleteProjectClip(project: C6MusicProject, clipId: string): C6MusicProject {
+  return { ...project, clips: project.clips.filter(clip => clip.id !== clipId) };
+}
+
+export function splitProjectClip(project: C6MusicProject, clipId: string, splitSeconds: number): C6MusicProject {
+  const source = project.clips.find(clip => clip.id === clipId);
+  if (!source) throw new Error(`Clip not found: ${clipId}`);
+  const relative = splitSeconds - source.startSeconds;
+  if (relative <= 0 || relative >= source.durationSeconds) throw new Error("Split point must be inside the clip");
+  const left: ProjectClip = { ...source, durationSeconds: relative };
+  const right: ProjectClip = {
+    ...source,
+    id: crypto.randomUUID(),
+    startSeconds: splitSeconds,
+    durationSeconds: source.durationSeconds - relative
+  };
+  return { ...project, clips: project.clips.flatMap(clip => clip.id === clipId ? [left, right] : [clip]) };
+}
+
+export function moveProjectClipToTrack(project: C6MusicProject, clipId: string, trackId: string): C6MusicProject {
+  if (!project.tracks.some(track => track.id === trackId)) throw new Error(`Track not found: ${trackId}`);
+  return {
+    ...project,
+    clips: project.clips.map(clip => clip.id === clipId ? { ...clip, trackId } : clip)
+  };
+}

@@ -18,6 +18,7 @@ export interface ProjectClip {
   startSeconds: number;
   durationSeconds: number;
   gainDb: number;
+  sourceOffsetSeconds?: number;
 }
 
 export interface ProjectOperation {
@@ -128,7 +129,8 @@ export function splitProjectClip(project: C6MusicProject, clipId: string, splitS
     ...source,
     id: crypto.randomUUID(),
     startSeconds: splitSeconds,
-    durationSeconds: source.durationSeconds - relative
+    durationSeconds: source.durationSeconds - relative,
+    sourceOffsetSeconds: (source.sourceOffsetSeconds ?? 0) + relative
   };
   return { ...project, clips: project.clips.flatMap(clip => clip.id === clipId ? [left, right] : [clip]) };
 }

@@ -37,3 +37,7 @@ footer{border:0;color:#737783;font-size:11px;justify-content:center}
 .piano-panel .section-title{height:32px;padding:9px 16px}
 
 .runtime-status{margin:12px 0}.runtime-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.runtime-list{display:grid;gap:8px}.runtime-item{display:flex;gap:9px;align-items:flex-start}.runtime-item small{display:block;opacity:.7;margin-top:2px}.runtime-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:0 0 auto}.runtime-ready{background:#38d996}.runtime-offline{background:#777}.runtime-error{background:#e56b6f}
+
+.clip-actions{position:absolute;right:10px;top:4px;display:flex;gap:2px;opacity:.85}
+.clip-actions button{padding:1px 4px;border:1px solid #858b9a;background:#292c34;color:#eee;border-radius:3px;font-size:8px;line-height:14px;cursor:pointer}
+.clip-actions button:hover{background:#3a3e49}

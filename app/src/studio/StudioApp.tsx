@@ -12,6 +12,7 @@ import { createStemJob, waitForStemJob } from "./api/StemClient";
 import { getStoredAsset, loadProject, saveProject, storeAsset } from "./persistence/ProjectStorage";
 import { exportProjectPackage, importProjectPackage } from "./persistence/ProjectPackage";
 import { RuntimeStatus } from "./RuntimeStatus";
+import { ModelManagerPanel } from "./ModelManagerPanel";
 import { MixerPanel } from "./MixerPanel";
 import { useProjectHistory } from "./persistence/useProjectHistory";
 
@@ -354,6 +355,7 @@ export function StudioApp() {
         <div className="ai-actions"><button disabled={generating || !selectedSource} onClick={() => void generate(1, "cover")}>Cover Selected</button><button disabled={generating || !selectedSource} onClick={() => void generate(1, "repaint")}>Repaint Selected</button></div>
         <small className="ai-hint">{selectedSource ? "Selected clip is the AI source." : "Select a timeline clip for Cover/Repaint."}</small>
         <RuntimeStatus />
+        <ModelManagerPanel />
         <h3>PROJECT</h3>
         <ImportAudio onImport={addAsset} />
         <button onClick={toggleRecording}>{recording ? "Stop Recording" : "Record"}</button>

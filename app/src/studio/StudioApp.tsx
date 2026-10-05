@@ -109,7 +109,7 @@ export function StudioApp() {
           id: clip.id,
           uri: asset.uri,
           startSeconds: clip.startSeconds,
-          offsetSeconds: Math.max(0, position - clip.startSeconds),
+          offsetSeconds: (clip.sourceOffsetSeconds ?? 0) + Math.max(0, position - clip.startSeconds),
           durationSeconds: clip.durationSeconds,
           gain: Math.pow(10, (track.gainDb + clip.gainDb) / 20),
           pan: track.pan

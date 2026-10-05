@@ -147,17 +147,24 @@ export function StudioApp() {
     }
   };
 
-  const generate = async () => {
+  const generate = async (batchSize = 1) => {
     if (generating) return;
     setGenerating(true);
-    setStatus("Queueing generation…");
+    setStatus(batchSize > 1 ? `Queueing ${batchSize} AI variations…` : "Queueing generation…");
     try {
-      const job = await createGeneration({ prompt });
+      const job = await createGeneration({ prompt, batchSize });
       const result = await waitForGeneration(job.jobId, s => setStatus(s.stage || s.status));
-      const uri = result.audioUrls[0];
-      if (!uri) throw new Error("Generation returned no audio asset");
-      addAsset(createImportedAsset(crypto.randomUUID(), uri, "AI Generation"));
-      setStatus(`Generated in ${result.generationTime ?? "—"}s`);
+      if (result.audioUrls.length === 0) throw new Error("Generation returned no audio assets");
+      result.audioUrls.forEach((uri, index) => {
+        addAsset({
+          id: crypto.randomUUID(),
+          uri,
+          name: batchSize > 1 ? `AI Variation ${index + 1}` : "AI Generation",
+          format: "mp3",
+          durationSeconds: result.duration
+        });
+      });
+      setStatus(batchSize > 1 ? `Generated ${result.audioUrls.length} variations` : `Generated in ${result.generationTime ?? "—"}s`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Generation failed");
     } finally {
@@ -278,7 +285,8 @@ export function StudioApp() {
       <aside className="sidebar">
         <h3>AI PRODUCER</h3>
         <textarea value={prompt} onChange={e => setPrompt(e.target.value)} />
-        <button className="primary" disabled={generating} onClick={generate}>{generating ? "Generating…" : "Generate Idea"}</button>
+        <button className="primary" disabled={generating} onClick={() => void generate()}>{generating ? "Generating…" : "Generate Idea"}</button>
+        <button disabled={generating} onClick={() => void generate(4)}>Generate 4 Variations</button>
         <RuntimeStatus />\n        <h3>PROJECT</h3>
         <ImportAudio onImport={addAsset} />
         <button onClick={toggleRecording}>{recording ? "Stop Recording" : "Record"}</button>

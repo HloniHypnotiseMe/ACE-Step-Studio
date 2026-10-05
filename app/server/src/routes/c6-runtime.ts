@@ -1,1 +1,29 @@
-import { Router, Request, Response } from 'express';\nimport { isGradioAvailable } from '../services/gradio-client.js';\n\nconst router = Router();\n\ninterface RuntimeCheck { id: string; label: string; status: "ready" | "offline" | "error"; detail: string; url?: string; }\n\nasync function checkHttp(url: string): Promise<RuntimeCheck["status"]> {\n  const controller = new AbortController();\n  const timer = setTimeout(() => controller.abort(), 2500);\n  try {\n    const response = await fetch(url, { signal: controller.signal });\n    return response.ok || response.status < 500 ? "ready" : "error";\n  } catch { return "offline"; } finally { clearTimeout(timer); }\n}\n\nrouter.get('/health', async (_req: Request, res: Response) => {\n  const aceReady = await isGradioAvailable();\n  const stemUrl = (process.env.C6_STEMDECK_URL || "http://127.0.0.1:8000").replace(/\/$/, "");\n  const stemStatus = process.env.C6_STEMDECK_ENABLED === "false" ? "offline" : await checkHttp(stemUrl + "/health");\n  const runtimes: RuntimeCheck[] = [\n    { id: "ace-step", label: "ACE-Step local generation", status: aceReady ? "ready" : "offline", detail: aceReady ? "Generation runtime reachable" : "Start the local ACE-Step runtime", url: process.env.ACESTEP_API_URL },\n    { id: "stemdeck", label: "StemDeck", status: stemStatus, detail: stemStatus === "ready" ? "Stem separation runtime reachable" : "Start StemDeck or disable it in .env", url: stemUrl }\n  ];\n  const ready = runtimes.filter(item => item.status === "ready").length;\n  res.json({ status: ready === runtimes.length ? "ready" : ready > 0 ? "partial" : "offline", runtimes, platform: process.platform, node: process.version, checkedAt: new Date().toISOString() });\n});\n\nexport default router;
+import { Router, Request, Response } from 'express';
+import { isGradioAvailable } from '../services/gradio-client.js';
+
+const router = Router();
+
+interface RuntimeCheck { id: string; label: string; status: "ready" | "offline" | "error"; detail: string; url?: string; }
+
+async function checkHttp(url: string): Promise<RuntimeCheck["status"]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    return response.ok || response.status < 500 ? "ready" : "error";
+  } catch { return "offline"; } finally { clearTimeout(timer); }
+}
+
+router.get('/health', async (_req: Request, res: Response) => {
+  const aceReady = await isGradioAvailable();
+  const stemUrl = (process.env.C6_STEMDECK_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+  const stemStatus = process.env.C6_STEMDECK_ENABLED === "false" ? "offline" : await checkHttp(stemUrl + "/health");
+  const runtimes: RuntimeCheck[] = [
+    { id: "ace-step", label: "ACE-Step local generation", status: aceReady ? "ready" : "offline", detail: aceReady ? "Generation runtime reachable" : "Start the local ACE-Step runtime", url: process.env.ACESTEP_API_URL },
+    { id: "stemdeck", label: "StemDeck", status: stemStatus, detail: stemStatus === "ready" ? "Stem separation runtime reachable" : "Start StemDeck or disable it in .env", url: stemUrl }
+  ];
+  const ready = runtimes.filter(item => item.status === "ready").length;
+  res.json({ status: ready === runtimes.length ? "ready" : ready > 0 ? "partial" : "offline", runtimes, platform: process.platform, node: process.version, checkedAt: new Date().toISOString() });
+});
+
+export default router;

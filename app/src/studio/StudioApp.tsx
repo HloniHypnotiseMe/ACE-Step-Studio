@@ -11,6 +11,7 @@ import { createGeneration, waitForGeneration } from "./api/GenerationClient";
 import { createStemJob, waitForStemJob } from "./api/StemClient";
 import { getStoredAsset, loadProject, saveProject, storeAsset } from "./persistence/ProjectStorage";\nimport { exportProjectPackage, importProjectPackage } from "./persistence/ProjectPackage";
 import { RuntimeStatus } from "./RuntimeStatus";
+import { MixerPanel } from "./MixerPanel";
 
 type StudioAsset = { id: string; uri: string; name: string; durationSeconds?: number };
 const TIMELINE_SECONDS = 32;
@@ -19,6 +20,7 @@ export function StudioApp() {
   const [project, setProject] = useState<C6MusicProject>(() => createProject("C6 Music Studio"));
   const [prompt, setPrompt] = useState("dark amapiano, warm bass, atmospheric keys, modern drums");
   const [playing, setPlaying] = useState(false);
+  const [transportSeconds, setTransportSeconds] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [recording, setRecording] = useState(false);
   const [splittingTrackId, setSplittingTrackId] = useState<string>();
@@ -66,6 +68,15 @@ export function StudioApp() {
     }, 1200);
     return () => window.clearTimeout(timer);
   }, [project, loaded]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const position = engine.positionSeconds;
+      setTransportSeconds(position);
+      if (playing && engine.state === "stopped") setPlaying(false);
+    }, 50);
+    return () => window.clearInterval(timer);
+  }, [engine, playing]);
 
   useEffect(() => {
     const first = assets[0];
@@ -258,7 +269,8 @@ export function StudioApp() {
 
     <section className="transport">
       <button onClick={toggle}>{playing ? "Pause" : "Play"}</button>
-      <button onClick={() => { engine.stop(); setPlaying(false); }}>Stop</button>
+      <button onClick={() => { engine.stop(); setPlaying(false); setTransportSeconds(0); }}>Stop</button>
+      <span className="transport-time">{Math.floor(transportSeconds / 60).toString().padStart(2, "0")}:{Math.floor(transportSeconds % 60).toString().padStart(2, "0")}.{Math.floor((transportSeconds % 1) * 10)}</span>
       <span>{project.bpm} BPM</span><span>{project.sampleRate / 1000} kHz</span><span>{assets.length} assets</span>
     </section>
 
@@ -354,6 +366,7 @@ export function StudioApp() {
       </section>
     </section>
 
+    <MixerPanel project={project} onTrackChange={updateTrack} />
     <section className="piano-panel"><div className="section-title">PIANO ROLL</div><PianoRoll /></section>
     <footer>{status} · Prompt → Generate → Edit → Arrange → Mix → Master → Export</footer>
   </main>;

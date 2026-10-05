@@ -332,17 +332,31 @@ export function StudioApp() {
     setStatus("New project");
   };
 
+  const loadSavedProject = async () => {
+    try {
+      const saved = await loadProject();
+      if (!saved) { setStatus("No saved project"); return; }
+      setProject({
+        ...saved.project,
+        clips: saved.project.clips ?? [],
+        tracks: saved.project.tracks.map(track => ({
+          ...track,
+          assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
+        }))
+      }, true);
+      setPlaying(false);
+      setSelectedClipId(undefined);
+      setPlayheadSeconds(0);
+      setStatus("Project loaded");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Load failed");
+    }
+  };
+
   return <main className="studio-shell">
     <header className="topbar">
       <div><strong>C6 MUSIC STUDIO</strong><span> LOCAL AI WORKSTATION</span></div>
-      <div><button onClick={manualSave}>Save</button><button onClick={undo} disabled={!canUndo}>Undo</button><button onClick={redo} disabled={!canRedo}>Redo</button><button onClick={() => void exportPackage()}>Export</button><button onClick={pickPackage}>Import</button><button onClick={() => void loadProject().then(saved => {
-        if (!saved) { setStatus("No saved project"); return; }
-        setProject({ ...saved.project, clips: saved.project.clips ?? [], tracks: saved.project.tracks.map(track => ({
-          ...track, assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
-        }) }), true);
-        setPlaying(false);
-        setStatus("Project loaded");
-      }).catch(error => setStatus(error instanceof Error ? error.message : "Load failed"))}>Load</button><button onClick={reset}>New Project</button></div>
+      <div><button onClick={manualSave}>Save</button><button onClick={undo} disabled={!canUndo}>Undo</button><button onClick={redo} disabled={!canRedo}>Redo</button><button onClick={() => void exportPackage()}>Export</button><button onClick={pickPackage}>Import</button><button onClick={() => void loadSavedProject()}>Load</button><button onClick={reset}>New Project</button></div>
     </header>
 
     <section className="transport">

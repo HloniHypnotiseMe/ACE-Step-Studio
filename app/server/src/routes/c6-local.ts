@@ -31,6 +31,14 @@ router.post('/generate', async (req: Request, res: Response) => {
       audioFormat: body.audioFormat === 'flac' ? 'flac' : 'mp3',
       thinking: Boolean(body.thinking ?? false),
       enhance: Boolean(body.enhance ?? false),
+      taskType: typeof body.taskType === 'string' ? body.taskType : undefined,
+      sourceAudioUrl: typeof body.sourceAudioUrl === 'string' ? body.sourceAudioUrl : undefined,
+      referenceAudioUrl: typeof body.referenceAudioUrl === 'string' ? body.referenceAudioUrl : undefined,
+      bpm: Number(body.bpm) > 0 ? Number(body.bpm) : undefined,
+      keyScale: typeof body.keyScale === 'string' ? body.keyScale : undefined,
+      timeSignature: typeof body.timeSignature === 'string' ? body.timeSignature : undefined,
+      repaintingStart: Number(body.repaintingStart) >= 0 ? Number(body.repaintingStart) : undefined,
+      repaintingEnd: Number(body.repaintingEnd) > 0 ? Number(body.repaintingEnd) : undefined,
     });
     return res.json({ ...job, status: 'queued' });
   } catch (error) {

@@ -17,8 +17,17 @@ export class ModelRegistry {
   private readonly models=new Map<string,ModelManifest>();
   register(model:ModelManifest):void { this.models.set(model.id,model); }
   get(id:string):ModelManifest|undefined { return this.models.get(id); }
-  eligible(id:string, backend:HardwareBackend, vramGb:number):boolean {
-    const m=this.models.get(id);
-    return !!m && m.localInference && m.backends.includes(backend) && (m.minVramGb===undefined || vramGb>=m.minVramGb);
+  list():ModelManifest[] { return [...this.models.values()]; }
+
+  eligible(backend:HardwareBackend,vramGb=0):ModelManifest[] {
+    return this.list().filter(model =>
+      model.localInference &&
+      model.backends.includes(backend) &&
+      (model.minVramGb===undefined || vramGb>=model.minVramGb)
+    );
+  }
+
+  isEligible(id:string,backend:HardwareBackend,vramGb=0):boolean {
+    return this.eligible(backend,vramGb).some(model=>model.id===id);
   }
 }

@@ -25,7 +25,7 @@ export class InMemoryJobQueue<TInput, TOutput> {
     if (this.jobs.has(id)) throw new Error(`Job already exists: ${id}`);
     const job: QueueJob<TInput,TOutput> = { id, input, status: "queued", createdAt: Date.now() };
     this.jobs.set(id, job);
-    void this.run(job);
+    queueMicrotask(() => { void this.run(job); });
     return { ...job };
   }
 

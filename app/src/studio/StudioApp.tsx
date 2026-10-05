@@ -200,7 +200,7 @@ export function StudioApp() {
     setStatus(taskType === "repaint" ? "Queueing AI repaint…" : taskType === "cover" ? "Queueing AI cover…" : batchSize > 1 ? "Queueing " + batchSize + " AI variations…" : "Queueing generation…");
     try {
       if (taskType !== "text2music" && !selectedSource) throw new Error("Select an audio clip first");
-      const job = await createGeneration({ prompt, batchSize, taskType, sourceAudioUrl: selectedSource?.uri, repaintingStart: taskType === "repaint" ? selectedClip?.startSeconds : undefined, repaintingEnd: taskType === "repaint" ? (selectedClip?.startSeconds ?? 0) + (selectedClip?.durationSeconds ?? 0) : undefined });
+      const job = await createGeneration({ prompt, batchSize, taskType, sourceAudioUrl: selectedSource?.uri, repaintingStart: taskType === "repaint" ? (selectedClip?.sourceOffsetSeconds ?? 0) : undefined, repaintingEnd: taskType === "repaint" ? (selectedClip?.sourceOffsetSeconds ?? 0) + (selectedClip?.durationSeconds ?? 0) : undefined });
       const result = await waitForGeneration(job.jobId, s => setStatus(s.stage || s.status));
       if (result.audioUrls.length === 0) throw new Error("Generation returned no audio assets");
       result.audioUrls.forEach((uri, index) => {

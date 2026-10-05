@@ -37,6 +37,8 @@ describe("multi-clip editing", () => {
     const split = splitProjectClip(duplicated, original.id, 4);
     expect(split.clips).toHaveLength(4);
     expect(split.clips.filter(clip => clip.trackId === original.trackId)).toHaveLength(3);
+    const rightHalf = split.clips.find(clip => clip.id !== original.id && clip.startSeconds === 4);
+    expect(rightHalf?.sourceOffsetSeconds).toBe(4);
     expect(deleteProjectClip(split, original.id).clips).toHaveLength(3);
   });
 

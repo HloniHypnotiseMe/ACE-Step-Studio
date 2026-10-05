@@ -1,0 +1,43 @@
+name: C6 Music Studio
+
+on:
+  push:
+    paths:
+      - "app/**"
+      - "c6-core/**"
+      - ".github/workflows/c6-music-studio.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - "c6-core/**"
+      - ".github/workflows/c6-music-studio.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install app dependencies
+        working-directory: app
+        run: npm install
+      - name: Install server dependencies
+        working-directory: app/server
+        run: npm install
+      - name: Typecheck app
+        working-directory: app
+        run: npm run typecheck
+      - name: Build app
+        working-directory: app
+        run: npm run build
+      - name: Install core dependencies
+        working-directory: c6-core
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Typecheck core
+        working-directory: c6-core
+        run: npm run typecheck
+      - name: Test core
+        working-directory: c6-core
+        run: npm test

@@ -10,6 +10,7 @@ import { BrowserRecorder } from "./recording/Recorder";
 import { createGeneration, waitForGeneration } from "./api/GenerationClient";
 import { createStemJob, waitForStemJob } from "./api/StemClient";
 import { getStoredAsset, loadProject, saveProject, storeAsset } from "./persistence/ProjectStorage";\nimport { exportProjectPackage, importProjectPackage } from "./persistence/ProjectPackage";
+import { RuntimeStatus } from "./RuntimeStatus";
 
 type StudioAsset = { id: string; uri: string; name: string; durationSeconds?: number };
 const TIMELINE_SECONDS = 32;
@@ -264,7 +265,7 @@ export function StudioApp() {
         <h3>AI PRODUCER</h3>
         <textarea value={prompt} onChange={e => setPrompt(e.target.value)} />
         <button className="primary" disabled={generating} onClick={generate}>{generating ? "Generating…" : "Generate Idea"}</button>
-        <h3>PROJECT</h3>
+        <RuntimeStatus />\n        <h3>PROJECT</h3>
         <ImportAudio onImport={addAsset} />
         <button onClick={toggleRecording}>{recording ? "Stop Recording" : "Record"}</button>
         <div className="card"><strong>{assets.length} audio assets</strong><br /><small>Stored locally with the project.</small></div>

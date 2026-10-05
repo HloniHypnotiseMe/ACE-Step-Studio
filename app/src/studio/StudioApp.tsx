@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { addAssetTrack, createProject, moveProjectClip, type C6MusicProject } from "../../../c6-core/src/project";
+import { addAssetTrack, createProject, moveProjectClip, resizeProjectClip, type C6MusicProject } from "../../../c6-core/src/project";
+import { snapSeconds } from "../../../c6-core/src/timeline";
 import { createImportedAsset } from "../../../c6-core/src/importer";
 import { BrowserAudioEngine } from "./audio/AudioEngine";
 import { Waveform } from "./audio/Waveform";
@@ -11,6 +12,7 @@ import { createStemJob, waitForStemJob } from "./api/StemClient";
 import { loadProject, saveProject } from "./persistence/ProjectStorage";
 
 type StudioAsset = { id: string; uri: string; name: string; durationSeconds?: number };
+const TIMELINE_SECONDS = 32;
 
 export function StudioApp() {
   const [project, setProject] = useState<C6MusicProject>(() => createProject("C6 Music Studio"));
@@ -33,12 +35,10 @@ export function StudioApp() {
     let cancelled = false;
     void loadProject().then(saved => {
       if (cancelled) return;
-      if (!saved) {
-        setLoaded(true);
-        return;
-      }
+      if (!saved) { setLoaded(true); return; }
       const restored: C6MusicProject = {
         ...saved.project,
+        clips: saved.project.clips ?? [],
         tracks: saved.project.tracks.map(track => ({
           ...track,
           assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
@@ -68,33 +68,17 @@ export function StudioApp() {
 
   useEffect(() => {
     const first = assets[0];
-    if (!first) {
-      setWaveform(undefined);
-      return;
-    }
+    if (!first) { setWaveform(undefined); return; }
     let cancelled = false;
     void engine.waveform(first.uri).then(w => {
       if (!cancelled) setWaveform(w);
-    }).catch(() => {
-      if (!cancelled) setWaveform(undefined);
-    });
+    }).catch(() => { if (!cancelled) setWaveform(undefined); });
     return () => { cancelled = true; };
   }, [assets.length, assets[0]?.uri, engine]);
 
-  const addAsset = (asset: {
-    id: string;
-    uri: string;
-    name?: string;
-    format?: string;
-    durationSeconds?: number;
-  }) => {
+  const addAsset = (asset: { id: string; uri: string; name?: string; format?: string; durationSeconds?: number }) => {
     const format = (asset.format as "wav" | "flac" | "aiff" | "mp3" | "ogg" | "unknown") || "unknown";
-    const audioAsset = {
-      id: asset.id,
-      uri: asset.uri,
-      format,
-      durationSeconds: asset.durationSeconds
-    };
+    const audioAsset = { id: asset.id, uri: asset.uri, format, durationSeconds: asset.durationSeconds };
     setProject(currentProject => addAssetTrack(currentProject, audioAsset, asset.name || "Audio"));
   };
 
@@ -113,15 +97,19 @@ export function StudioApp() {
     }
     await engine.start();
     setPlaying(true);
+    const position = engine.positionSeconds;
     const soloActive = project.tracks.some(track => track.solo);
     for (const track of project.tracks) {
       const asset = track.assets[0];
-      if (!asset || track.muted || (soloActive && !track.solo)) continue;
+      const clip = project.clips.find(item => item.trackId === track.id);
+      if (!asset || !clip || track.muted || (soloActive && !track.solo)) continue;
       void engine.playClip({
         id: track.id,
         uri: asset.uri,
-        startSeconds: 0,
-        gain: Math.pow(10, track.gainDb / 20),
+        startSeconds: clip.startSeconds,
+        offsetSeconds: Math.max(0, position - clip.startSeconds),
+        durationSeconds: clip.durationSeconds,
+        gain: Math.pow(10, (track.gainDb + clip.gainDb) / 20),
         pan: track.pan
       });
     }
@@ -172,13 +160,10 @@ export function StudioApp() {
     setStatus(`Sending ${track.name} to local StemDeck…`);
     try {
       const job = await createStemJob(asset.uri, `${track.name}.wav`);
-      const result = await waitForStemJob(job.job_id, state => {
-        setStatus(state.stage || `Stem separation ${state.status}`);
-      });
+      const result = await waitForStemJob(job.job_id, state => setStatus(state.stage || `Stem separation ${state.status}`));
       for (const stem of result.stems || []) {
-        const stemId = crypto.randomUUID();
         addAsset({
-          id: stemId,
+          id: crypto.randomUUID(),
           uri: stem.url,
           name: `${track.name} · ${stem.name}`,
           format: "wav",
@@ -213,30 +198,20 @@ export function StudioApp() {
   return <main className="studio-shell">
     <header className="topbar">
       <div><strong>C6 MUSIC STUDIO</strong><span> LOCAL AI WORKSTATION</span></div>
-      <div>
-        <button onClick={manualSave}>Save</button>
-        <button onClick={() => void loadProject().then(saved => {
-          if (!saved) { setStatus("No saved project"); return; }
-          setProject({
-            ...saved.project,
-            tracks: saved.project.tracks.map(track => ({
-              ...track,
-              assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
-            }))
-          });
-          setPlaying(false);
-          setStatus("Project loaded");
-        }).catch(error => setStatus(error instanceof Error ? error.message : "Load failed"))}>Load</button>
-        <button onClick={reset}>New Project</button>
-      </div>
+      <div><button onClick={manualSave}>Save</button><button onClick={() => void loadProject().then(saved => {
+        if (!saved) { setStatus("No saved project"); return; }
+        setProject({ ...saved.project, clips: saved.project.clips ?? [], tracks: saved.project.tracks.map(track => ({
+          ...track, assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
+        })) });
+        setPlaying(false);
+        setStatus("Project loaded");
+      }).catch(error => setStatus(error instanceof Error ? error.message : "Load failed"))}>Load</button><button onClick={reset}>New Project</button></div>
     </header>
 
     <section className="transport">
       <button onClick={toggle}>{playing ? "Pause" : "Play"}</button>
       <button onClick={() => { engine.stop(); setPlaying(false); }}>Stop</button>
-      <span>{project.bpm} BPM</span>
-      <span>{project.sampleRate / 1000} kHz</span>
-      <span>{assets.length} assets</span>
+      <span>{project.bpm} BPM</span><span>{project.sampleRate / 1000} kHz</span><span>{assets.length} assets</span>
     </section>
 
     <section className="workspace">
@@ -244,20 +219,16 @@ export function StudioApp() {
         <h3>AI PRODUCER</h3>
         <textarea value={prompt} onChange={e => setPrompt(e.target.value)} />
         <button className="primary" disabled={generating} onClick={generate}>{generating ? "Generating…" : "Generate Idea"}</button>
-
         <h3>PROJECT</h3>
         <ImportAudio onImport={addAsset} />
         <button onClick={toggleRecording}>{recording ? "Stop Recording" : "Record"}</button>
         <div className="card"><strong>{assets.length} audio assets</strong><br /><small>Stored locally with the project.</small></div>
-
-        {assets.map(asset => <div className="card" key={asset.id}>
-          <strong>{asset.name}</strong><br />
-          <small>{asset.uri}</small>
-        </div>)}
+        {assets.map(asset => <div className="card" key={asset.id}><strong>{asset.name}</strong><br /><small>{asset.uri}</small></div>)}
       </aside>
 
       <section className="arrangement">
-        <div className="section-title">ARRANGEMENT</div>
+        <div className="section-title">ARRANGEMENT <small>Drag clips · resize right edge · snap: 1 beat</small></div>
+        <div className="timeline-ruler">{[0, 4, 8, 12, 16, 20, 24, 28, 32].map(second => <span key={second}>{second}s</span>)}</div>
         <div className="wave-row"><Waveform samples={waveform} /></div>
 
         {project.tracks.length === 0
@@ -265,19 +236,66 @@ export function StudioApp() {
           : project.tracks.map(track => {
               const asset = track.assets[0];
               const clip = project.clips.find(item => item.trackId === track.id);
-              const left = clip ? Math.min(90, Math.max(0, clip.startSeconds * 3)) : 0;
-              const width = clip ? Math.min(100 - left, Math.max(8, clip.durationSeconds * 3)) : Math.min(100, Math.max(8, (asset?.durationSeconds ?? 8) * 3));
+              const left = clip ? Math.min(100, Math.max(0, clip.startSeconds / TIMELINE_SECONDS * 100)) : 0;
+              const width = clip ? Math.min(100 - left, Math.max(4, clip.durationSeconds / TIMELINE_SECONDS * 100)) : Math.min(100, Math.max(4, (asset?.durationSeconds ?? 8) / TIMELINE_SECONDS * 100));
               return <div className="track" key={track.id}>
                 <span>{track.name}</span>
-                <div className="lane" onDoubleClick={() => {
-                  if (!clip) return;
-                  setProject(currentProject => moveProjectClip(currentProject, clip.id, Math.max(0, clip.startSeconds + 4)));
-                  setStatus(`Moved ${track.name} to ${(clip.startSeconds + 4).toFixed(1)}s`);
-                }}>
-                  <i style={{ left: `${left}%`, width: `${width}%` }} />
+                <div className="lane">
+                  {clip && <i
+                    className="clip"
+                    style={{ left: `${left}%`, width: `${width}%` }}
+                    onPointerDown={event => {
+                      event.stopPropagation();
+                      const lane = event.currentTarget.parentElement;
+                      if (!lane) return;
+                      const rect = lane.getBoundingClientRect();
+                      const original = clip.startSeconds;
+                      const startX = event.clientX;
+                      const move = (e: PointerEvent) => {
+                        const delta = (e.clientX - startX) / rect.width * TIMELINE_SECONDS;
+                        const next = snapSeconds(Math.max(0, original + delta), project.bpm);
+                        setProject(current => moveProjectClip(current, clip.id, next));
+                      };
+                      const up = () => {
+                        window.removeEventListener("pointermove", move);
+                        window.removeEventListener("pointerup", up);
+                      };
+                      window.addEventListener("pointermove", move);
+                      window.addEventListener("pointerup", up, { once: true });
+                    }}
+                  >
+                    <span>{track.name} · {clip.startSeconds.toFixed(1)}s</span>
+                    <button
+                      className="clip-resize"
+                      aria-label={`Resize ${track.name}`}
+                      onPointerDown={event => {
+                        event.stopPropagation();
+                        const lane = event.currentTarget.parentElement?.parentElement;
+                        if (!lane) return;
+                        const rect = lane.getBoundingClientRect();
+                        const original = clip.durationSeconds;
+                        const startX = event.clientX;
+                        const maxDuration = asset?.durationSeconds ?? original + TIMELINE_SECONDS;
+                        const move = (e: PointerEvent) => {
+                          const delta = (e.clientX - startX) / rect.width * TIMELINE_SECONDS;
+                          const next = Math.min(maxDuration, Math.max(0.25, snapSeconds(original + delta, project.bpm)));
+                          setProject(current => resizeProjectClip(current, clip.id, next));
+                        };
+                        const up = () => {
+                          window.removeEventListener("pointermove", move);
+                          window.removeEventListener("pointerup", up);
+                        };
+                        window.addEventListener("pointermove", move);
+                        window.addEventListener("pointerup", up, { once: true });
+                      }}
+                    />
+                  </i>}
                 </div>
-                <button onClick={() => updateTrack(track.id, { muted: !track.muted })}>{track.muted ? "Unmute" : "Mute"}</button>
-                <button onClick={() => updateTrack(track.id, { solo: !track.solo })}>{track.solo ? "Unsolo" : "Solo"}</button><button disabled={Boolean(splittingTrackId)} onClick={() => void splitStems(track.id)}>{splittingTrackId === track.id ? "Splitting…" : "Split Stems"}</button>
+                <div className="track-controls">
+                  <button onClick={() => updateTrack(track.id, { muted: !track.muted })}>{track.muted ? "Unmute" : "Mute"}</button>
+                  <button onClick={() => updateTrack(track.id, { solo: !track.solo })}>{track.solo ? "Unsolo" : "Solo"}</button>
+                  <button disabled={Boolean(splittingTrackId)} onClick={() => void splitStems(track.id)}>{splittingTrackId === track.id ? "Splitting…" : "Split Stems"}</button>
+                </div>
               </div>;
             })}
       </section>

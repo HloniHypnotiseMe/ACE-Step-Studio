@@ -295,13 +295,14 @@ export function StudioApp() {
           ? [...Array(4)].map((_, i) => <div className="track" key={i}><span>Track {i + 1}</span><div className="lane" /></div>)
           : project.tracks.map(track => {
               const asset = track.assets[0];
-              const clip = project.clips.find(item => item.trackId === track.id);
-              const left = clip ? Math.min(100, Math.max(0, clip.startSeconds / TIMELINE_SECONDS * 100)) : 0;
-              const width = clip ? Math.min(100 - left, Math.max(4, clip.durationSeconds / TIMELINE_SECONDS * 100)) : Math.min(100, Math.max(4, (asset?.durationSeconds ?? 8) / TIMELINE_SECONDS * 100));
+              const clips = project.clips.filter(item => item.trackId === track.id);
               return <div className="track" key={track.id}>
                 <span>{track.name}</span>
                 <div className="lane">
-                  {clip && <i
+                  {clips.map(clip => {
+                    const left = Math.min(100, Math.max(0, clip.startSeconds / TIMELINE_SECONDS * 100));
+                    const width = Math.min(100 - left, Math.max(4, clip.durationSeconds / TIMELINE_SECONDS * 100));
+                    return <i
                     className="clip"
                     style={{ left: `${left}%`, width: `${width}%` }}
                     onPointerDown={event => {
@@ -354,7 +355,8 @@ export function StudioApp() {
                         window.addEventListener("pointerup", up, { once: true });
                       }}
                     />
-                  </i>}
+                  </i>;
+                  })}
                 </div>
                 <div className="track-controls">
                   <button onClick={() => updateTrack(track.id, { muted: !track.muted })}>{track.muted ? "Unmute" : "Mute"}</button>

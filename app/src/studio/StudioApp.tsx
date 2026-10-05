@@ -12,12 +12,13 @@ import { createStemJob, waitForStemJob } from "./api/StemClient";
 import { getStoredAsset, loadProject, saveProject, storeAsset } from "./persistence/ProjectStorage";\nimport { exportProjectPackage, importProjectPackage } from "./persistence/ProjectPackage";
 import { RuntimeStatus } from "./RuntimeStatus";
 import { MixerPanel } from "./MixerPanel";
+import { useProjectHistory } from "./persistence/useProjectHistory";
 
 type StudioAsset = { id: string; uri: string; name: string; durationSeconds?: number };
 const TIMELINE_SECONDS = 32;
 
 export function StudioApp() {
-  const [project, setProject] = useState<C6MusicProject>(() => createProject("C6 Music Studio"));
+  const { project, setProject, apply: applyProject, undo, redo, canUndo, canRedo } = useProjectHistory(createProject("C6 Music Studio"));
   const [prompt, setPrompt] = useState("dark amapiano, warm bass, atmospheric keys, modern drums");
   const [playing, setPlaying] = useState(false);
   const [transportSeconds, setTransportSeconds] = useState(0);
@@ -70,6 +71,22 @@ export function StudioApp() {
   }, [project, loaded]);
 
   useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const modifier = event.ctrlKey || event.metaKey;
+      if (!modifier) return;
+      if (event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        if (event.shiftKey) redo(); else undo();
+      } else if (event.key.toLowerCase() === "y") {
+        event.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undo, redo]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       const position = engine.positionSeconds;
       setTransportSeconds(position);
@@ -91,11 +108,11 @@ export function StudioApp() {
   const addAsset = (asset: { id: string; uri: string; name?: string; format?: string; durationSeconds?: number }) => {
     const format = (asset.format as "wav" | "flac" | "aiff" | "mp3" | "ogg" | "unknown") || "unknown";
     const audioAsset = { id: asset.id, uri: asset.uri, format, durationSeconds: asset.durationSeconds };
-    setProject(currentProject => addAssetTrack(currentProject, audioAsset, asset.name || "Audio"));
+    applyProject(currentProject => addAssetTrack(currentProject, audioAsset, asset.name || "Audio"));
   };
 
   const updateTrack = (id: string, patch: Partial<C6MusicProject["tracks"][number]>) => {
-    setProject(currentProject => ({
+    applyProject(currentProject => ({
       ...currentProject,
       tracks: currentProject.tracks.map(track => track.id === id ? { ...track, ...patch } : track)
     }));
@@ -234,7 +251,7 @@ export function StudioApp() {
           ...track,
           assets: track.assets.map(asset => ({ ...asset, uri: restored.assets.get(asset.id) ?? asset.uri }))
         }))
-      });
+      }, true);
       setPlaying(false);
       setStatus(`Imported ${file.name}`);
     } catch (error) {
@@ -256,7 +273,7 @@ export function StudioApp() {
   const reset = () => {
     engine.stop();
     setPlaying(false);
-    setProject(createProject("C6 Music Studio"));
+    setProject(createProject("C6 Music Studio"), true);
     setWaveform(undefined);
     setStatus("New project");
   };
@@ -264,11 +281,11 @@ export function StudioApp() {
   return <main className="studio-shell">
     <header className="topbar">
       <div><strong>C6 MUSIC STUDIO</strong><span> LOCAL AI WORKSTATION</span></div>
-      <div><button onClick={manualSave}>Save</button><button onClick={() => void exportPackage()}>Export</button><button onClick={pickPackage}>Import</button><button onClick={() => void loadProject().then(saved => {
+      <div><button onClick={manualSave}>Save</button><button onClick={undo} disabled={!canUndo}>Undo</button><button onClick={redo} disabled={!canRedo}>Redo</button><button onClick={() => void exportPackage()}>Export</button><button onClick={pickPackage}>Import</button><button onClick={() => void loadProject().then(saved => {
         if (!saved) { setStatus("No saved project"); return; }
         setProject({ ...saved.project, clips: saved.project.clips ?? [], tracks: saved.project.tracks.map(track => ({
           ...track, assets: track.assets.map(asset => ({ ...asset, uri: saved.assets.get(asset.id) ?? asset.uri }))
-        })) });
+        }) }), true);
         setPlaying(false);
         setStatus("Project loaded");
       }).catch(error => setStatus(error instanceof Error ? error.message : "Load failed"))}>Load</button><button onClick={reset}>New Project</button></div>
@@ -278,7 +295,7 @@ export function StudioApp() {
       <button onClick={toggle}>{playing ? "Pause" : "Play"}</button>
       <button onClick={() => { engine.stop(); setPlaying(false); setTransportSeconds(0); }}>Stop</button>
       <span className="transport-time">{Math.floor(transportSeconds / 60).toString().padStart(2, "0")}:{Math.floor(transportSeconds % 60).toString().padStart(2, "0")}.{Math.floor((transportSeconds % 1) * 10)}</span>
-      <span>{project.bpm} BPM</span><span>{project.sampleRate / 1000} kHz</span><span>{assets.length} assets</span>
+      <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd+Z)">↶</button><button onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd+Shift+Z)">↷</button><span>{project.bpm} BPM</span><span>{project.sampleRate / 1000} kHz</span><span>{assets.length} assets</span>
     </section>
 
     <section className="workspace">
@@ -323,7 +340,7 @@ export function StudioApp() {
                       const move = (e: PointerEvent) => {
                         const delta = (e.clientX - startX) / rect.width * TIMELINE_SECONDS;
                         const next = snapSeconds(Math.max(0, original + delta), project.bpm);
-                        setProject(current => moveProjectClip(current, clip.id, next));
+                        applyProject(current => moveProjectClip(current, clip.id, next));
                       };
                       const up = () => {
                         window.removeEventListener("pointermove", move);
@@ -335,16 +352,16 @@ export function StudioApp() {
                   >
                     <span>{track.name} · {clip.startSeconds.toFixed(1)}s</span>
                     <div className="clip-actions">
-                      <button aria-label={`Duplicate ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => duplicateProjectClip(current, clip.id, Math.max(1, clip.durationSeconds)))}>+</button>
-                      <button aria-label={`Split ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => splitProjectClip(current, clip.id, clip.startSeconds + clip.durationSeconds / 2))}>Split</button>
-                      <button aria-label={`Delete ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => deleteProjectClip(current, clip.id))}>×</button>
+                      <button aria-label={`Duplicate ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => applyProject(current => duplicateProjectClip(current, clip.id, Math.max(1, clip.durationSeconds)))}>+</button>
+                      <button aria-label={`Split ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => applyProject(current => splitProjectClip(current, clip.id, clip.startSeconds + clip.durationSeconds / 2))}>Split</button>
+                      <button aria-label={`Delete ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => applyProject(current => deleteProjectClip(current, clip.id))}>×</button>
                       <button
                         aria-label={`Move ${track.name} to next track`}
                         onPointerDown={event => event.stopPropagation()}
                         onClick={() => {
                           const index = project.tracks.findIndex(item => item.id === track.id);
                           const target = project.tracks[index + 1];
-                          if (target) setProject(current => moveProjectClipToTrack(current, clip.id, target.id));
+                          if (target) applyProject(current => moveProjectClipToTrack(current, clip.id, target.id));
                         }}
                       >↕</button>
                     </div>
@@ -362,7 +379,7 @@ export function StudioApp() {
                         const move = (e: PointerEvent) => {
                           const delta = (e.clientX - startX) / rect.width * TIMELINE_SECONDS;
                           const next = Math.min(maxDuration, Math.max(0.25, snapSeconds(original + delta, project.bpm)));
-                          setProject(current => resizeProjectClip(current, clip.id, next));
+                          applyProject(current => resizeProjectClip(current, clip.id, next));
                         };
                         const up = () => {
                           window.removeEventListener("pointermove", move);

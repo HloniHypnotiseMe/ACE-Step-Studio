@@ -116,6 +116,14 @@ export async function loadProject(): Promise<PersistedProject | undefined> {
   return { project, assets, savedAt: stored.savedAt };
 }
 
-export async function getStoredAsset(id: string): Promise<Blob | undefined> {\n  return getAsset(id);\n}\n\nexport async function storeAsset(id: string, blob: Blob): Promise<void> {\n  await putAsset(id, blob);\n}\n\nexport async function hasSavedProject(): Promise<boolean> {
+export async function getStoredAsset(id: string): Promise<Blob | undefined> {
+  return getAsset(id);
+}
+
+export async function storeAsset(id: string, blob: Blob): Promise<void> {
+  await putAsset(id, blob);
+}
+
+export async function hasSavedProject(): Promise<boolean> {
   return Boolean(await getProject());
 }

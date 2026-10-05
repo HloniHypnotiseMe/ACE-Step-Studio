@@ -32,6 +32,7 @@ import renderVideoRoutes from './routes/render-video.js';
 import toolsRoutes from './routes/tools.js';
 import c6LocalRoutes from './routes/c6-local.js';
 import c6StemRoutes from './routes/c6-stems.js';
+import c6RuntimeRoutes from './routes/c6-runtime.js';
 import { pipelineManager } from './services/pipeline-manager.js';
 import { pool } from './db/pool.js';
 import './db/migrate.js';
@@ -104,6 +105,7 @@ app.use(express.json({ limit: '50mb' }));
 
 // Serve static audio files
 app.use('/audio', express.static(path.join(__dirname, '../public/audio')));
+app.use('/api/c6-runtime', c6RuntimeRoutes);
 
 // Audio Editor (AudioMass) - needs relaxed CSP for inline scripts and external images
 app.use('/editor', (req, res, next) => {

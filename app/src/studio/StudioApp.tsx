@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { addAssetTrack, createProject, moveProjectClip, resizeProjectClip, type C6MusicProject } from "../../../c6-core/src/project";
+import { addAssetTrack, createProject, moveProjectClip, resizeProjectClip, duplicateProjectClip, splitProjectClip, deleteProjectClip, type C6MusicProject } from "../../../c6-core/src/project";
 import { snapSeconds } from "../../../c6-core/src/timeline";
 import { createImportedAsset } from "../../../c6-core/src/importer";
 import { BrowserAudioEngine } from "./audio/AudioEngine";
@@ -101,18 +101,20 @@ export function StudioApp() {
     const position = engine.positionSeconds;
     const soloActive = project.tracks.some(track => track.solo);
     for (const track of project.tracks) {
-      const asset = track.assets[0];
-      const clip = project.clips.find(item => item.trackId === track.id);
-      if (!asset || !clip || track.muted || (soloActive && !track.solo)) continue;
-      void engine.playClip({
-        id: track.id,
-        uri: asset.uri,
-        startSeconds: clip.startSeconds,
-        offsetSeconds: Math.max(0, position - clip.startSeconds),
-        durationSeconds: clip.durationSeconds,
-        gain: Math.pow(10, (track.gainDb + clip.gainDb) / 20),
-        pan: track.pan
-      });
+      if (track.muted || (soloActive && !track.solo)) continue;
+      for (const clip of project.clips.filter(item => item.trackId === track.id)) {
+        const asset = track.assets.find(item => item.id === clip.assetId);
+        if (!asset) continue;
+        void engine.playClip({
+          id: clip.id,
+          uri: asset.uri,
+          startSeconds: clip.startSeconds,
+          offsetSeconds: Math.max(0, position - clip.startSeconds),
+          durationSeconds: clip.durationSeconds,
+          gain: Math.pow(10, (track.gainDb + clip.gainDb) / 20),
+          pan: track.pan
+        });
+      }
     }
   };
 
@@ -311,6 +313,11 @@ export function StudioApp() {
                     }}
                   >
                     <span>{track.name} · {clip.startSeconds.toFixed(1)}s</span>
+                    <div className="clip-actions">
+                      <button aria-label={`Duplicate ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => duplicateProjectClip(current, clip.id, Math.max(1, clip.durationSeconds)))}>+</button>
+                      <button aria-label={`Split ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => splitProjectClip(current, clip.id, clip.startSeconds + clip.durationSeconds / 2))}>Split</button>
+                      <button aria-label={`Delete ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => deleteProjectClip(current, clip.id))}>×</button>
+                    </div>
                     <button
                       className="clip-resize"
                       aria-label={`Resize ${track.name}`}

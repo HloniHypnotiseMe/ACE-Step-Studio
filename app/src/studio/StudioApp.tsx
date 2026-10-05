@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { addAssetTrack, createProject, moveProjectClip, resizeProjectClip, duplicateProjectClip, splitProjectClip, deleteProjectClip, type C6MusicProject } from "../../../c6-core/src/project";
+import { addAssetTrack, createProject, moveProjectClip, resizeProjectClip, duplicateProjectClip, splitProjectClip, deleteProjectClip, moveProjectClipToTrack, type C6MusicProject } from "../../../c6-core/src/project";
 import { snapSeconds } from "../../../c6-core/src/timeline";
 import { createImportedAsset } from "../../../c6-core/src/importer";
 import { BrowserAudioEngine } from "./audio/AudioEngine";
@@ -338,6 +338,15 @@ export function StudioApp() {
                       <button aria-label={`Duplicate ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => duplicateProjectClip(current, clip.id, Math.max(1, clip.durationSeconds)))}>+</button>
                       <button aria-label={`Split ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => splitProjectClip(current, clip.id, clip.startSeconds + clip.durationSeconds / 2))}>Split</button>
                       <button aria-label={`Delete ${track.name}`} onPointerDown={event => event.stopPropagation()} onClick={() => setProject(current => deleteProjectClip(current, clip.id))}>×</button>
+                      <button
+                        aria-label={`Move ${track.name} to next track`}
+                        onPointerDown={event => event.stopPropagation()}
+                        onClick={() => {
+                          const index = project.tracks.findIndex(item => item.id === track.id);
+                          const target = project.tracks[index + 1];
+                          if (target) setProject(current => moveProjectClipToTrack(current, clip.id, target.id));
+                        }}
+                      >↕</button>
                     </div>
                     <button
                       className="clip-resize"

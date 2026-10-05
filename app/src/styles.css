@@ -35,3 +35,5 @@ footer{border:0;color:#737783;font-size:11px;justify-content:center}
 .beat{width:12.5%;border-right:1px solid #292b31}
 .midi-note{position:absolute;height:15px;border:1px solid #aaa;border-radius:2px;background:#686e7c;color:#eee;font-size:8px;overflow:hidden;padding:0}
 .piano-panel .section-title{height:32px;padding:9px 16px}
+
+.runtime-status{margin:12px 0}.runtime-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.runtime-list{display:grid;gap:8px}.runtime-item{display:flex;gap:9px;align-items:flex-start}.runtime-item small{display:block;opacity:.7;margin-top:2px}.runtime-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:0 0 auto}.runtime-ready{background:#38d996}.runtime-offline{background:#777}.runtime-error{background:#e56b6f}

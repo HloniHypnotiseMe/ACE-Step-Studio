@@ -7,6 +7,14 @@ export interface GenerationRequest {
   audioFormat?: "mp3" | "flac";
   thinking?: boolean;
   enhance?: boolean;
+  taskType?: "text2music" | "cover" | "repaint" | "audio2audio";
+  sourceAudioUrl?: string;
+  referenceAudioUrl?: string;
+  bpm?: number;
+  keyScale?: string;
+  timeSignature?: string;
+  repaintingStart?: number;
+  repaintingEnd?: number;
 }
 export interface GenerationResponse { jobId: string; status: "queued"; }
 export interface GenerationJobStatus {

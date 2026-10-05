@@ -368,7 +368,7 @@ export function StudioApp() {
                   {clips.map(clip => {
                     const left = Math.min(100, Math.max(0, clip.startSeconds / TIMELINE_SECONDS * 100));
                     const width = Math.min(100 - left, Math.max(4, clip.durationSeconds / TIMELINE_SECONDS * 100));
-                    return <i
+                    return <div
                     className={"clip" + (selectedClipId === clip.id ? " selected" : "")}
                     style={{ left: left + "%", width: width + "%" }}
                     onPointerDown={event => {
@@ -431,7 +431,7 @@ export function StudioApp() {
                         window.addEventListener("pointerup", up, { once: true });
                       }}
                     />
-                  </i>;
+                  </div>;
                   })}
                 </div>
                 <div className="track-controls">

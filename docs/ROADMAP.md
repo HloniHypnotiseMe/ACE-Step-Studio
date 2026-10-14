@@ -85,3 +85,20 @@ Only after product/usage validation:
 - proprietary production assistant
 - proprietary workflow intelligence
 - optional fine-tuning on properly licensed/consented data
+
+
+## Cross-cutting release gates (must close before calling the desktop product production-ready)
+
+- [ ] Hardware detection integration tests on Windows NVIDIA, AMD ROCm, Apple Silicon, and CPU-only hosts; never infer VRAM from a device name.
+- [ ] Runtime readiness uses provider-specific health contracts. A reachable HTTP server or a 404 response is not proof that a model can generate audio.
+- [ ] Model manifests are populated only from reviewed sources with separate code/weights licenses, hashes, provenance, backend requirements, and commercial redistribution decisions.
+- [ ] Asset lineage persists across project save/load/export/import and records provider, model/version when known, task, parameters, parent assets, and license-verification state.
+- [ ] AI job lifecycle: progress, cancellation, timeout, retry policy, bounded concurrency, worker crash recovery, and no orphaned processes.
+- [ ] Runtime process manager: configurable executable/arguments/working directory, environment allowlist, startup/shutdown, health checks, logs, and graceful failure. Never accept arbitrary command strings from the UI.
+- [ ] Project safety: schema migrations, atomic saves/backups, missing-media relinking, package size limits, archive/path traversal protection, and corrupted-project recovery.
+- [ ] Audio correctness: resampling, sample-accurate transport, loop/seek/pause correctness, clipping protection, latency reporting, device selection, and audio-thread isolation.
+- [ ] Security/privacy: bind local control API to loopback by default, authenticate any LAN exposure, restrict outbound URL fetches, validate uploads, redact secrets from logs, and offer explicit telemetry consent.
+- [ ] Release validation: dependency/license/SBOM audit, Windows installer smoke test, clean-machine install/uninstall, signed artifacts where supported, upgrade/rollback test, and backup/recovery drill.
+- [ ] Product gaps beyond the first slice: MIDI export/import and actual instrument playback, undo/redo for every edit, automation/busses/plugin hosting, take comping, offline render, accessibility, and keyboard-focus QA.
+
+Do not mark a gate VERIFIED from source inspection alone: require an automated test, reproducible manual test, or external license/source evidence appropriate to that gate.

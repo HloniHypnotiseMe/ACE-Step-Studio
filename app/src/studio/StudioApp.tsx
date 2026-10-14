@@ -210,7 +210,8 @@ export function StudioApp() {
           uri,
           name: batchSize > 1 ? `AI Variation ${index + 1}` : "AI Generation",
           format: "mp3",
-          durationSeconds: result.duration
+          durationSeconds: result.duration,
+          provenance: { origin: "generated", providerId: "ace-step", taskType, parentAssetIds: selectedSource && taskType !== "text2music" ? [selectedSource.id] : [], createdAt: new Date().toISOString(), parameters: { prompt, batchSize, taskType }, licenseVerified: false }
         });
       });
       setStatus(taskType === "repaint" ? "Repainted " + result.audioUrls.length + " asset(s)" : taskType === "cover" ? "Created " + result.audioUrls.length + " cover asset(s)" : batchSize > 1 ? "Generated " + result.audioUrls.length + " variations" : "Generated in " + (result.generationTime ?? "—") + "s");
@@ -237,7 +238,8 @@ export function StudioApp() {
           uri: stem.url,
           name: `${track.name} · ${stem.name}`,
           format: "wav",
-          durationSeconds: result.duration_sec ?? asset.durationSeconds
+          durationSeconds: result.duration_sec ?? asset.durationSeconds,
+          provenance: { origin: "stem", providerId: "stemdeck", taskType: "stem-separation", parentAssetIds: [asset.id], createdAt: new Date().toISOString(), parameters: { stem: stem.name }, licenseVerified: false }
         });
       }
       setStatus(`Created ${result.stems?.length ?? 0} editable stems`);

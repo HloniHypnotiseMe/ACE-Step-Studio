@@ -6,6 +6,19 @@ export interface ProviderContext {
   signal?: AbortSignal;
 }
 
+export interface AssetProvenance {
+  origin: "generated" | "recorded" | "imported" | "stem" | "derived";
+  providerId?: string;
+  modelId?: string;
+  modelVersion?: string;
+  taskType?: "text2music" | "cover" | "repaint" | "audio2audio" | "stem-separation" | "recording" | "import";
+  parentAssetIds: string[];
+  createdAt: string;
+  parameters?: Record<string, unknown>;
+  license?: string;
+  licenseVerified: boolean;
+}
+
 export interface AudioAsset {
   id: string;
   uri: string;

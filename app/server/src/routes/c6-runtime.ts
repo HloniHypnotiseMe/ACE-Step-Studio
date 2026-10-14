@@ -11,7 +11,7 @@ async function checkHttp(url: string): Promise<RuntimeCheck["status"]> {
   const timer = setTimeout(() => controller.abort(), 2500);
   try {
     const response = await fetch(url, { signal: controller.signal });
-    return response.ok || response.status < 500 ? "ready" : "error";
+    return response.ok ? "ready" : response.status < 500 ? "offline" : "error";
   } catch { return "offline"; } finally { clearTimeout(timer); }
 }
 

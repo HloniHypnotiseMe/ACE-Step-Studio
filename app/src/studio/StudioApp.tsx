@@ -136,9 +136,9 @@ export function StudioApp() {
     return () => { cancelled = true; };
   }, [assets.length, assets[0]?.uri, engine]);
 
-  const addAsset = (asset: { id: string; uri: string; name?: string; format?: string; durationSeconds?: number }) => {
+  const addAsset = (asset: { id: string; uri: string; name?: string; format?: string; durationSeconds?: number; provenance?: import("../../../c6-core/src/contracts").AssetProvenance }) => {
     const format = (asset.format as "wav" | "flac" | "aiff" | "mp3" | "ogg" | "unknown") || "unknown";
-    const audioAsset = { id: asset.id, uri: asset.uri, format, durationSeconds: asset.durationSeconds };
+    const audioAsset = { id: asset.id, uri: asset.uri, format, durationSeconds: asset.durationSeconds, provenance: asset.provenance ?? { origin: "imported" as const, parentAssetIds: [], createdAt: new Date().toISOString(), licenseVerified: false } };
     applyProject(currentProject => addAssetTrack(currentProject, audioAsset, asset.name || "Audio"));
   };
 

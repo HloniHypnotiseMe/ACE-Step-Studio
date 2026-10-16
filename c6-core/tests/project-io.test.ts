@@ -37,6 +37,25 @@ describe("project persistence", () => {
     expect(restored.tracks[0].assets[0].provenance?.licenseVerified).toBe(false);
   });
 
+  it("rejects project packages whose clips reference missing tracks or assets", () => {
+    const project = addAssetTrack(createProject("Broken"), {
+      id: "asset-1", uri: "audio/one.wav", format: "wav", durationSeconds: 4
+    });
+    const payload = JSON.parse(serializeProject(project));
+    payload.project.clips[0].trackId = "missing-track";
+    expect(() => deserializeProject(JSON.stringify(payload))).toThrow(/missing track/);
+  });
+
+  it("rejects malformed project structure and provenance instead of loading unsafe state", () => {
+    expect(() => deserializeProject(JSON.stringify({ manifest: { schemaVersion: 1, projectId: "x" }, project: {} }))).toThrow(/Invalid project/);
+
+    const project = addAssetTrack(createProject("Bad provenance"), {
+      id: "asset-bad", uri: "audio/bad.wav", format: "wav",
+      provenance: "untrusted string" as unknown as AudioAsset["provenance"]
+    });
+    expect(() => deserializeProject(serializeProject(project))).toThrow(/provenance is malformed/);
+  });
+
   it("migrates legacy projects without provenance without inventing verification", () => {
     const project=createProject("Legacy");
     const legacy = addAssetTrack(project, {

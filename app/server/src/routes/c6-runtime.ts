@@ -15,14 +15,25 @@ async function checkHttp(url: string): Promise<RuntimeCheck["status"]> {
   } catch { return "offline"; } finally { clearTimeout(timer); }
 }
 
+function stemDeckHealthTarget(): { url?: string; detail: string } {
+  const explicit = process.env.C6_STEMDECK_HEALTH_URL?.trim();
+  if (explicit) return { url: explicit, detail: "Configured StemDeck health endpoint" };
+  // StemDeck is a standalone local desktop app; its API does not guarantee /health.
+  // Do not probe an assumed route and report a false negative/positive.
+  return { detail: "Not verified: set C6_STEMDECK_HEALTH_URL to a health endpoint exposed by the configured StemDeck-compatible API" };
+}
+
 router.get('/health', async (_req: Request, res: Response) => {
   const aceReady = await isGradioAvailable();
-  const stemUrl = (process.env.C6_STEMDECK_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-  const stemStatus = process.env.C6_STEMDECK_ENABLED === "false" ? "offline" : await checkHttp(stemUrl + "/health");
+  const stemBaseUrl = (process.env.C6_STEMDECK_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+  const stemHealth = stemDeckHealthTarget();
+  const stemStatus = process.env.C6_STEMDECK_ENABLED === "false"
+    ? "offline"
+    : stemHealth.url ? await checkHttp(stemHealth.url) : "offline";
   const hardware = await detectHardware();
   const runtimes: RuntimeCheck[] = [
     { id: "ace-step", label: "ACE-Step local generation", status: aceReady ? "ready" : "offline", detail: aceReady ? "Generation runtime reachable" : "Start the local ACE-Step runtime", url: process.env.ACESTEP_API_URL },
-    { id: "stemdeck", label: "StemDeck", status: stemStatus, detail: stemStatus === "ready" ? "Stem separation runtime reachable" : "Start StemDeck or disable it in .env", url: stemUrl }
+    { id: "stemdeck", label: "StemDeck API", status: stemStatus, detail: process.env.C6_STEMDECK_ENABLED === "false" ? "StemDeck bridge disabled by configuration" : stemHealth.url ? (stemStatus === "ready" ? "Configured health endpoint reachable" : "Configured health endpoint did not pass its health check") : stemHealth.detail, url: stemHealth.url ?? stemBaseUrl }
   ];
   const ready = runtimes.filter(item => item.status === "ready").length;
   res.json({ status: ready === runtimes.length ? "ready" : ready > 0 ? "partial" : "offline", runtimes, hardware, platform: process.platform, node: process.version, checkedAt: new Date().toISOString() });
@@ -31,8 +42,8 @@ router.get('/health', async (_req: Request, res: Response) => {
 router.get('/readiness', async (_req: Request, res: Response) => {
   const aceReady = await isGradioAvailable();
   const hardware = await detectHardware();
-  const stemUrl = (process.env.C6_STEMDECK_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-  const stemReady = process.env.C6_STEMDECK_ENABLED !== "false" && await checkHttp(stemUrl + "/health") === "ready";
+  const stemHealth = stemDeckHealthTarget();
+  const stemReady = process.env.C6_STEMDECK_ENABLED !== "false" && Boolean(stemHealth.url) && await checkHttp(stemHealth.url!) === "ready";
   const checks = {
     aceStep: aceReady,
     stemSeparation: stemReady,

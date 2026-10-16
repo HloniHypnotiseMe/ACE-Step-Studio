@@ -26,6 +26,9 @@ jobs:
       - name: Install server dependencies
         working-directory: app/server
         run: npm install
+      - name: Typecheck server
+        working-directory: app/server
+        run: npm run build
       - name: Typecheck app
         working-directory: app
         run: npm run typecheck

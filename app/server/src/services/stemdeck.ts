@@ -1,5 +1,3 @@
-import { Blob } from "node:buffer";
-
 const baseUrl = () => (process.env.C6_STEMDECK_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 export interface StemDeckJob {
@@ -18,7 +16,9 @@ export interface StemDeckState {
 
 export async function submitStemDeckJob(file: Buffer, filename: string, stems: string[] = []): Promise<StemDeckJob> {
   const form = new FormData();
-  form.append("file", new Blob([file]), filename);
+  const bytes = new Uint8Array(file.byteLength);
+  bytes.set(file);
+  form.append("file", new Blob([bytes.buffer]), filename);
   form.append("stems", JSON.stringify(stems));
 
   const response = await fetch(`${baseUrl()}/api/jobs`, { method: "POST", body: form });

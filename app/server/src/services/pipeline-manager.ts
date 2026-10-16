@@ -27,6 +27,7 @@ class PipelineManager {
   private restartCount = 0;
   private startedAt: number | null = null;
   private healthCheckTimer: ReturnType<typeof setInterval> | null = null;
+  private stableResetTimer: ReturnType<typeof setTimeout> | null = null;
   private isShuttingDown = false;
   private isSwitchingModel = false;
   private readyResolve: (() => void) | null = null;
@@ -208,7 +209,11 @@ class PipelineManager {
       }
     }
 
-    this.restartCount = 0;
+    if (this.stableResetTimer) clearTimeout(this.stableResetTimer);
+    this.stableResetTimer = setTimeout(() => {
+      if (this.state === 'ready') this.restartCount = 0;
+      this.stableResetTimer = null;
+    }, 60_000);
     console.log('[Pipeline] Ready!');
 
     this.startHealthCheck();
@@ -226,15 +231,14 @@ class PipelineManager {
 
     this.healthCheckTimer = setInterval(async () => {
       if (this.state !== 'ready' || this.isSwitchingModel) return;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
       try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 5000);
         const res = await fetch(
           `http://localhost:${config.pipeline.port}/gradio_api/info`,
           { signal: controller.signal },
         );
-        clearTimeout(timer);
-        if (res.ok || res.status < 500) {
+        if (res.ok) {
           consecutiveFailures = 0;
         } else {
           consecutiveFailures++;
@@ -243,9 +247,11 @@ class PipelineManager {
       } catch {
         consecutiveFailures++;
         console.warn(`[Pipeline] Health check failed: no response (${consecutiveFailures}/3)`);
+      } finally {
+        clearTimeout(timer);
       }
 
-      // Only act after 3 consecutive failures to avoid false positives during generation
+      // Only act after 3 consecutive failures to avoid false positives during generation.
       if (consecutiveFailures >= 3) {
         this.handleUnhealthy();
         consecutiveFailures = 0;
@@ -319,6 +325,8 @@ class PipelineManager {
   async shutdown(): Promise<void> {
     this.isShuttingDown = true;
     this.stopHealthCheck();
+    if (this.stableResetTimer) clearTimeout(this.stableResetTimer);
+    this.stableResetTimer = null;
     console.log('[Pipeline] Shutting down...');
     this.killProcess();
     this.state = 'stopped';

@@ -52,14 +52,15 @@ export async function isGradioAvailable(): Promise<boolean> {
   ];
 
   for (const url of candidates) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
       const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timer);
-      if (response.ok || response.status < 500) return true;
+      if (response.ok) return true;
     } catch {
       // Try next candidate
+    } finally {
+      clearTimeout(timer);
     }
   }
   return false;

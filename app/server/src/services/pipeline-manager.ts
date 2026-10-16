@@ -234,7 +234,7 @@ class PipelineManager {
           { signal: controller.signal },
         );
         clearTimeout(timer);
-        if (res.ok || res.status < 500) {
+        if (res.ok) {
           consecutiveFailures = 0;
         } else {
           consecutiveFailures++;

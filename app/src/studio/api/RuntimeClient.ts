@@ -17,6 +17,7 @@ export interface RuntimeModelManifest {
   provenanceVerified?: boolean;
   commercialRedistribution: boolean;
   commercialReady: boolean;
+  hardwareEligible: boolean;
   localInference: boolean;
   minVramGb?: number;
   backends: string[];

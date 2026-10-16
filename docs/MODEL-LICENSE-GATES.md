@@ -31,4 +31,13 @@ No dependency becomes a bundled production dependency until it passes all gates.
 - performance benchmark
 - deterministic failure handling
 
+## Enforcement in C6 core
+
+- A model manifest must identify its id, version, license, and provenance before registration.
+- Hardware eligibility and commercial eligibility are separate decisions.
+- ModelRegistry.eligible(...) evaluates local-inference and hardware compatibility; it does **not** mean a model is cleared for commercial distribution.
+- ModelRegistry.commercialReady(...) requires commercialRedistribution, licenseVerified, weightsLicenseVerified, and provenanceVerified to be explicitly true.
+- Missing review flags fail closed. Do not infer verification from a license name, model card, or provider identity.
+- No model manifests are currently pre-approved or auto-registered by the application. The empty model inventory is intentional until evidence is reviewed.
+
 A model may be used for local development while being blocked from the commercial distribution bundle until all gates pass.

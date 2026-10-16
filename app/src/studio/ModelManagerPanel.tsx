@@ -23,13 +23,18 @@ export function ModelManagerPanel() {
       </div>
       <div className="readiness-grid">
         <span className={state.checks.aceStep ? "ok" : "warn"}>ACE-Step {state.checks.aceStep ? "READY" : "OFFLINE"}</span>
-        <span className={state.checks.stemSeparation ? "ok" : "warn"}>STEMS {state.checks.stemSeparation ? "READY" : "OFFLINE"}</span>
-        <span className={state.checks.modelsAvailable ? "ok" : "warn"}>MODELS {state.checks.modelsAvailable ? "READY" : "NONE REGISTERED"}</span>
+        <span className={state.checks.stemSeparation ? "ok" : "warn"}>STEMS {state.checks.stemSeparation ? "READY" : "NOT VERIFIED"}</span>
+        <span className={state.checks.modelsAvailable ? "ok" : "warn"}>MANIFESTS {state.checks.modelsAvailable ? "REGISTERED" : "NONE REGISTERED"}</span>
       </div>
-      {state.models.length === 0 ? <small>No model manifests are registered yet. Eligibility stays license/provenance gated.</small> :
+      {state.modelManifest?.warning && <small>{state.modelManifest.warning}</small>}
+      {state.models.length === 0 ? <small>No model manifests are registered. Configure C6_MODEL_MANIFEST_PATH with a reviewed local JSON manifest; models are never auto-approved or downloaded.</small> :
         state.models.map(model => <div className="model-row" key={model.id}>
-          <div><strong>{model.id}</strong><small>{model.providerId} · v{model.version} · {model.license}</small></div>
-          <span>{model.commercialRedistribution ? "Commercial-ready" : "Non-commercial"}</span>
+          <div>
+            <strong>{model.id}</strong>
+            <small>{model.providerId} · v{model.version} · code: {model.license} · weights: {model.weightsLicense ?? "unreviewed"}</small>
+            <small>Local inference: {model.localInference ? "yes" : "no"} · License review: {model.licenseVerified === true ? "passed" : "pending"} · Weight review: {model.weightsLicenseVerified === true ? "passed" : "pending"} · Provenance: {model.provenanceVerified === true ? "verified" : "pending"}</small>
+          </div>
+          <span>{model.commercialReady ? "Commercial-cleared" : "Review required"}</span>
         </div>)}
     </>}
   </section>;

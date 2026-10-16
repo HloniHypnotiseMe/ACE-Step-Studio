@@ -32,7 +32,8 @@ export function ModelManagerPanel() {
           <div>
             <strong>{model.id}</strong>
             <small>{model.providerId} · v{model.version} · code: {model.license} · weights: {model.weightsLicense ?? "unreviewed"}</small>
-            <small>Local inference: {model.localInference ? "yes" : "no"} · License review: {model.licenseVerified === true ? "passed" : "pending"} · Weight review: {model.weightsLicenseVerified === true ? "passed" : "pending"} · Provenance: {model.provenanceVerified === true ? "verified" : "pending"}</small>
+            <small>Hardware: {model.hardwareEligible ? "compatible" : "not eligible / requirements unknown"} · Local inference: {model.localInference ? "yes" : "no"}</small>
+            <small>License review: {model.licenseVerified === true ? "passed" : "pending"} · Weight review: {model.weightsLicenseVerified === true ? "passed" : "pending"} · Provenance: {model.provenanceVerified === true ? "verified" : "pending"}</small>
           </div>
           <span>{model.commercialReady ? "Commercial-cleared" : "Review required"}</span>
         </div>)}

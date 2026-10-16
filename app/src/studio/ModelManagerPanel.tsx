@@ -24,7 +24,7 @@ export function ModelManagerPanel() {
       <div className="readiness-grid">
         <span className={state.checks.aceStep ? "ok" : "warn"}>ACE-Step {state.checks.aceStep ? "READY" : "OFFLINE"}</span>
         <span className={state.checks.stemSeparation ? "ok" : "warn"}>STEMS {state.checks.stemSeparation ? "READY" : "NOT VERIFIED"}</span>
-        <span className={state.checks.modelManifestsConfigured ? "ok" : "warn"}>MANIFESTS {state.checks.modelsAvailable ? "REGISTERED" : "NONE REGISTERED"}</span>
+        <span className={state.checks.modelManifestsConfigured ? "ok" : "warn"}>MANIFESTS {state.checks.modelManifestsConfigured ? "REGISTERED" : "NONE REGISTERED"}</span>
       </div>
       {state.modelManifest?.warning && <small>{state.modelManifest.warning}</small>}
       {state.models.length === 0 ? <small>No model manifests are registered. Configure C6_MODEL_MANIFEST_PATH with a reviewed local JSON manifest; models are never auto-approved or downloaded.</small> :

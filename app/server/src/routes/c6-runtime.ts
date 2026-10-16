@@ -43,13 +43,14 @@ router.get('/health', async (_req: Request, res: Response) => {
 router.get('/readiness', async (_req: Request, res: Response) => {
   const aceReady = await isGradioAvailable();
   const hardware = await detectHardware();
+  const modelInventory = await loadModelManifests();
   const stemHealth = stemDeckHealthTarget();
   const stemReady = process.env.C6_STEMDECK_ENABLED !== "false" && Boolean(stemHealth.url) && await checkHttp(stemHealth.url!) === "ready";
   const checks = {
     aceStep: aceReady,
     stemSeparation: stemReady,
     hardwareDetected: hardware.source === "detected",
-    modelsAvailable: false
+    modelsAvailable: modelInventory.models.length > 0
   };
   res.json({
     readiness: checks.aceStep && checks.hardwareDetected ? "ready" : aceReady ? "partial" : "offline",

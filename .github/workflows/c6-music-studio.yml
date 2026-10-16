@@ -29,6 +29,9 @@ jobs:
       - name: Typecheck server
         working-directory: app/server
         run: npm run build
+      - name: Test server model manifest validation
+        working-directory: app/server
+        run: npm test
       - name: Typecheck app
         working-directory: app
         run: npm run typecheck

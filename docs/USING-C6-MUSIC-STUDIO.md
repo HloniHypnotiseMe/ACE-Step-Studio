@@ -55,9 +55,11 @@ Set:
 ```env
 C6_STEMDECK_ENABLED=true
 C6_STEMDECK_URL=http://127.0.0.1:8000
+# Optional: only set this when your configured API actually exposes a health endpoint
+C6_STEMDECK_HEALTH_URL=http://127.0.0.1:8000/health
 ```
 
-Then run StemDeck locally. If StemDeck is unavailable, the rest of the studio remains usable.
+Then run the StemDeck-compatible local API. The health dashboard does not assume that a standalone StemDeck desktop build exposes `/health`; set `C6_STEMDECK_HEALTH_URL` only when your configured API provides that endpoint. Without it, health is reported as unverified rather than claiming StemDeck is reachable. If stem separation is unavailable, the rest of the studio remains usable.
 
 ## Important boundary
 

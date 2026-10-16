@@ -25,7 +25,7 @@ export interface RuntimeModelManifest {
 
 export interface RuntimeReadiness {
   readiness: "ready" | "partial" | "offline";
-  checks: { aceStep: boolean; stemSeparation: boolean; hardwareDetected: boolean; modelsAvailable: boolean };
+  checks: { aceStep: boolean; stemSeparation: boolean; hardwareDetected: boolean; modelManifestsConfigured: boolean };
   hardware: HardwareDetection;
   models: RuntimeModelManifest[];
   modelManifest?: { source: "configured-file" | "not-configured" | "invalid"; warning?: string };

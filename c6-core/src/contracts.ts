@@ -26,6 +26,8 @@ export interface AudioAsset {
   sampleRate?: number;
   channels?: number;
   durationSeconds?: number;
+  /** Origin and license evidence travel with the asset through project save/load. */
+  provenance?: AssetProvenance;
 }
 
 export interface GenerationRequest {

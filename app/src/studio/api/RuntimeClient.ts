@@ -6,11 +6,29 @@ export interface HardwareDetection {
   detail: string;
 }
 
+export interface RuntimeModelManifest {
+  id: string;
+  version: string;
+  providerId: string;
+  license: string;
+  weightsLicense?: string;
+  licenseVerified?: boolean;
+  weightsLicenseVerified?: boolean;
+  provenanceVerified?: boolean;
+  commercialRedistribution: boolean;
+  commercialReady: boolean;
+  localInference: boolean;
+  minVramGb?: number;
+  backends: string[];
+  provenance: string;
+}
+
 export interface RuntimeReadiness {
   readiness: "ready" | "partial" | "offline";
   checks: { aceStep: boolean; stemSeparation: boolean; hardwareDetected: boolean; modelsAvailable: boolean };
   hardware: HardwareDetection;
-  models: Array<{ id: string; version: string; providerId: string; license: string; commercialRedistribution: boolean; localInference: boolean; minVramGb?: number; backends: string[]; provenance: string }>;
+  models: RuntimeModelManifest[];
+  modelManifest?: { source: "configured-file" | "not-configured" | "invalid"; warning?: string };
   runtimes: { aceStep: boolean; stemSeparation: boolean };
   checkedAt: string;
 }

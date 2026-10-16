@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { isGradioAvailable } from '../services/gradio-client.js';
 import { detectHardware } from '../services/hardware-detection.js';
+import { loadModelManifests } from '../services/model-manifest.js';
 
 const router = Router();
 
@@ -54,7 +55,8 @@ router.get('/readiness', async (_req: Request, res: Response) => {
     readiness: checks.aceStep && checks.hardwareDetected ? "ready" : aceReady ? "partial" : "offline",
     checks,
     hardware,
-    models: [],
+    models: modelInventory.models.map(model => ({ ...model, commercialReady: model.commercialRedistribution && model.licenseVerified === true && model.weightsLicenseVerified === true && model.provenanceVerified === true })),
+    modelManifest: { source: modelInventory.source, warning: modelInventory.warning },
     runtimes: { aceStep: aceReady, stemSeparation: stemReady },
     checkedAt: new Date().toISOString()
   });

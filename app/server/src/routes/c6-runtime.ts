@@ -50,7 +50,7 @@ router.get('/readiness', async (_req: Request, res: Response) => {
     aceStep: aceReady,
     stemSeparation: stemReady,
     hardwareDetected: hardware.source === "detected",
-    modelsAvailable: modelInventory.models.length > 0
+    modelManifestsConfigured: modelInventory.models.length > 0
   };
   res.json({
     readiness: checks.aceStep && checks.hardwareDetected ? "ready" : aceReady ? "partial" : "offline",

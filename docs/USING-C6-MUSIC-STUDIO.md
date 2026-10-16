@@ -83,3 +83,32 @@ The build is considered usable when a user can:
 `Launch → Import/Generate/Record → Edit timeline → Play → Split stems → Save → Reload`
 
 without requiring a cloud service for the core editing workflow.
+
+## Model inventory configuration
+
+The Model Manager reads a local JSON manifest only when `C6_MODEL_MANIFEST_PATH` is explicitly set in the server environment. It does not download models, infer licenses, or mark weights as installed. The manifest may be a JSON array or an object with a `models` array.
+
+Example entry (replace with evidence-backed values before use):
+
+```json
+{
+  "models": [
+    {
+      "id": "your-model-id",
+      "version": "1.0",
+      "providerId": "your-provider-adapter",
+      "license": "review required",
+      "weightsLicense": "review required",
+      "commercialRedistribution": false,
+      "localInference": true,
+      "backends": ["cpu"],
+      "provenance": "URL or local evidence reference",
+      "licenseVerified": false,
+      "weightsLicenseVerified": false,
+      "provenanceVerified": false
+    }
+  ]
+}
+```
+
+A manifest entry is inventory metadata, not proof that the model weights are installed. Commercial clearance requires all three review flags to be explicitly true, in addition to commercial redistribution being permitted. Missing or malformed manifest files fail closed and are surfaced in the Model Manager.

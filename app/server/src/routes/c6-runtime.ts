@@ -56,7 +56,7 @@ router.get('/readiness', async (_req: Request, res: Response) => {
     readiness: checks.aceStep && checks.hardwareDetected ? "ready" : aceReady ? "partial" : "offline",
     checks,
     hardware,
-    models: modelInventory.models.map(model => ({ ...model, commercialReady: model.commercialRedistribution && model.licenseVerified === true && model.weightsLicenseVerified === true && model.provenanceVerified === true })),
+    models: modelInventory.models.map(model => ({ ...model, hardwareEligible: model.localInference && model.backends.includes(hardware.backend) && (model.minVramGb === undefined || (hardware.vramGb !== null && hardware.vramGb >= model.minVramGb)), commercialReady: model.commercialRedistribution && model.licenseVerified === true && model.weightsLicenseVerified === true && model.provenanceVerified === true })),
     modelManifest: { source: modelInventory.source, warning: modelInventory.warning },
     runtimes: { aceStep: aceReady, stemSeparation: stemReady },
     checkedAt: new Date().toISOString()
